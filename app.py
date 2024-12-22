@@ -5,4 +5,5 @@ import ai_gradio
 interface = gr.load(
     name='crewai:gpt-4-turbo',  # Explicitly use CrewAI provider
     src=ai_gradio.registry,
+    crew_type="support"
 ).launch()

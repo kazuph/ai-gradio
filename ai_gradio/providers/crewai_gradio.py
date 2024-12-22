@@ -22,62 +22,117 @@ class MessageQueue:
             messages.append(self.message_queue.get())
         return messages
 
+class CrewFactory:
+    @staticmethod
+    def create_crew_config(crew_type: str, topic: str) -> dict:
+        configs = {
+            "article": {
+                "agents": [
+                    {
+                        "role": "Content Planner",
+                        "goal": f"Plan engaging and factually accurate content on {topic}",
+                        "backstory": "Expert content planner with focus on creating engaging outlines",
+                        "tasks": [
+                            """Create a detailed content plan for an article by:
+                            1. Prioritizing the latest trends and key players
+                            2. Identifying the target audience
+                            3. Developing a detailed content outline
+                            4. Including SEO keywords and sources"""
+                        ]
+                    },
+                    {
+                        "role": "Content Writer",
+                        "goal": f"Write insightful piece about {topic}",
+                        "backstory": "Expert content writer with focus on engaging articles",
+                        "tasks": [
+                            """1. Use the content plan to craft a compelling blog post
+                            2. Incorporate SEO keywords naturally
+                            3. Create proper structure with introduction, body, and conclusion"""
+                        ]
+                    },
+                    {
+                        "role": "Editor",
+                        "goal": "Polish and refine the content",
+                        "backstory": "Expert editor with eye for detail and clarity",
+                        "tasks": [
+                            """1. Review for clarity and coherence
+                            2. Correct any errors
+                            3. Ensure consistent tone and style"""
+                        ]
+                    }
+                ]
+            },
+            "support": {
+                "agents": [
+                    {
+                        "role": "Senior Support Representative",
+                        "goal": "Be the most helpful support representative",
+                        "backstory": "Expert at analyzing questions and providing support",
+                        "tasks": [
+                            f"""Analyze this inquiry thoroughly: {topic}
+                            Provide detailed support response."""
+                        ]
+                    },
+                    {
+                        "role": "Support Quality Assurance",
+                        "goal": "Ensure highest quality of support responses",
+                        "backstory": "Expert at reviewing and improving support responses",
+                        "tasks": [
+                            """Review and improve the support response to ensure it's:
+                            1. Comprehensive and helpful
+                            2. Properly formatted with clear structure"""
+                        ]
+                    }
+                ]
+            }
+        }
+        return configs.get(crew_type, configs["article"])
+
 class CrewManager:
     def __init__(self, api_key: str = None):
         self.api_key = api_key
         self.message_queue = MessageQueue()
-        self.support_agent = None
-        self.qa_agent = None
+        self.agents = []
         self.current_agent = None
         self.scrape_tool = None
 
-    def initialize_agents(self, website_url: str):
+    def initialize_agents(self, crew_type: str, topic: str, website_url: str = None):
         if not self.api_key:
             raise ValueError("OpenAI API key is required")
 
         os.environ["OPENAI_API_KEY"] = self.api_key
-        self.scrape_tool = ScrapeWebsiteTool(website_url=website_url)
+        if website_url:
+            self.scrape_tool = ScrapeWebsiteTool(website_url=website_url)
 
-        self.support_agent = Agent(
-            role="Senior Support Representative",
-            goal="Be the most friendly and helpful support representative",
-            backstory="Expert at analyzing questions and providing comprehensive support",
-            allow_delegation=False,
-            verbose=True
-        )
+        # Get crew configuration
+        config = CrewFactory.create_crew_config(crew_type, topic)
+        
+        # Initialize agents from configuration
+        self.agents = []
+        for agent_config in config["agents"]:
+            agent = Agent(
+                role=agent_config["role"],
+                goal=agent_config["goal"],
+                backstory=agent_config["backstory"],
+                allow_delegation=False,
+                verbose=True
+            )
+            self.agents.append((agent, agent_config["tasks"]))
 
-        self.qa_agent = Agent(
-            role="Support Quality Assurance Specialist",
-            goal="Ensure the highest quality of support responses",
-            backstory="Expert at reviewing and improving support responses",
-            verbose=True
-        )
+    def create_tasks(self, topic: str) -> List[Task]:
+        tasks = []
+        for agent, task_descriptions in self.agents:
+            for task_desc in task_descriptions:
+                task = Task(
+                    description=task_desc,
+                    expected_output="Detailed and well-formatted response",
+                    agent=agent,
+                    tools=[self.scrape_tool] if self.scrape_tool else []
+                )
+                tasks.append(task)
+        return tasks
 
-    def create_tasks(self, inquiry: str) -> List[Task]:
-        inquiry_resolution = Task(
-            description=f"""
-            Analyze this inquiry thoroughly:
-            {inquiry}
-            
-            Provide detailed support response.
-            """,
-            expected_output="Detailed support response addressing all aspects of the inquiry",
-            tools=[self.scrape_tool],
-            agent=self.support_agent
-        )
-
-        quality_review = Task(
-            description="""
-            Review and improve the support response to ensure it's comprehensive and helpful.
-            Format the response appropriately with proper structure and clarity.
-            """,
-            expected_output="Final polished response ready for the customer",
-            agent=self.qa_agent
-        )
-
-        return [inquiry_resolution, quality_review]
-
-    async def process_support(self, inquiry: str, website_url: str) -> Generator[List[Dict], None, None]:
+    async def process_support(self, inquiry: str, website_url: str, crew_type: str) -> Generator[List[Dict], None, None]:
         def add_agent_messages(agent_name: str, tasks: str, emoji: str = "🤖"):
             self.message_queue.add_message({
                 "role": "assistant",
@@ -92,12 +147,26 @@ class CrewManager:
             })
 
         def setup_next_agent(current_agent: str):
-            if current_agent == "Senior Support Representative":
-                self.current_agent = "Support Quality Assurance Specialist"
-                add_agent_messages(
-                    "Support Quality Assurance Specialist",
-                    "Review and improve the support response"
-                )
+            if crew_type == "support":
+                if current_agent == "Senior Support Representative":
+                    self.current_agent = "Support Quality Assurance Specialist"
+                    add_agent_messages(
+                        "Support Quality Assurance Specialist",
+                        "Review and improve the support response"
+                    )
+            elif crew_type == "article":
+                if current_agent == "Content Planner":
+                    self.current_agent = "Content Writer"
+                    add_agent_messages(
+                        "Content Writer",
+                        "Write the article based on the content plan"
+                    )
+                elif current_agent == "Content Writer":
+                    self.current_agent = "Editor"
+                    add_agent_messages(
+                        "Editor",
+                        "Review and polish the article"
+                    )
 
         def task_callback(task_output):
             raw_output = task_output.raw
@@ -133,8 +202,9 @@ class CrewManager:
                 setup_next_agent(self.current_agent)
 
         try:
-            self.initialize_agents(website_url)
-            self.current_agent = "Senior Support Representative"
+            self.initialize_agents(crew_type, inquiry, website_url)
+            # Set initial agent based on crew type
+            self.current_agent = "Senior Support Representative" if crew_type == "support" else "Content Planner"
 
             yield [{
                 "role": "assistant",
@@ -142,13 +212,20 @@ class CrewManager:
                 "metadata": {"title": "🚀 Process Started"}
             }]
 
-            add_agent_messages(
-                "Senior Support Representative",
-                "Analyze inquiry and provide comprehensive support"
-            )
+            # Set initial task message based on crew type
+            if crew_type == "support":
+                add_agent_messages(
+                    "Senior Support Representative",
+                    "Analyze inquiry and provide comprehensive support"
+                )
+            else:
+                add_agent_messages(
+                    "Content Planner",
+                    "Create a detailed content plan for the article"
+                )
 
             crew = Crew(
-                agents=[self.support_agent, self.qa_agent],
+                agents=[agent for agent, _ in self.agents],
                 tasks=self.create_tasks(inquiry),
                 verbose=True,
                 task_callback=task_callback
@@ -182,61 +259,58 @@ class CrewManager:
                 "metadata": {"title": "❌ Error"}
             }]
 
-def registry(name: str, token: str | None = None, **kwargs):
-    # Use provided token or get from environment
+def registry(name: str, token: str | None = None, crew_type: str = "support", **kwargs):
     default_api_key = os.environ.get("OPENAI_API_KEY")
     crew_manager = None
 
     with gr.Blocks(theme=gr.themes.Soft()) as demo:
-        gr.Markdown("# 🤖 CrewAI Support")
-        gr.Markdown("Get help from a crew of AI agents working together.")
+        title = "📝 AI Article Writing Crew" if crew_type == "article" else "🤖 CrewAI Assistant"
+        gr.Markdown(f"# {title}")
         
-        # Only show API key input if no default key is available
         api_key = gr.Textbox(
             label="OpenAI API Key",
             type="password",
             placeholder="Type your OpenAI API key and press Enter...",
             interactive=True,
-            visible=not (token or default_api_key)  # Hide if token is provided or default exists
+            visible=not (token or default_api_key)
         )
 
         chatbot = gr.Chatbot(
-            label="Support Process",
-            height=600,
+            label="Writing Process" if crew_type == "article" else "Process",
+            height=700 if crew_type == "article" else 600,
             show_label=True,
-            visible=token or default_api_key,  # Show immediately if API key exists
+            visible=token or default_api_key,
             avatar_images=(None, "https://avatars.githubusercontent.com/u/170677839?v=4"),
             render_markdown=True
         )
         
         with gr.Row(equal_height=True):
-            inquiry = gr.Textbox(
-                label="Your Inquiry",
-                placeholder="Enter your question...",
+            topic = gr.Textbox(
+                label="Article Topic" if crew_type == "article" else "Topic/Question",
+                placeholder="Enter topic..." if crew_type == "article" else "Enter your question...",
                 scale=4,
-                visible=token or default_api_key  # Show immediately if API key exists
+                visible=token or default_api_key
             )
             website_url = gr.Textbox(
                 label="Documentation URL",
                 placeholder="Enter documentation URL to search...",
                 scale=4,
-                visible=token or default_api_key  # Show immediately if API key exists
+                visible=(token or default_api_key) and crew_type == "support"
             )
             btn = gr.Button(
-                "Get Support", 
+                "Write Article" if crew_type == "article" else "Start", 
                 variant="primary", 
                 scale=1, 
-                visible=token or default_api_key  # Show immediately if API key exists
+                visible=token or default_api_key
             )
 
-        async def process_input(inquiry_text, website_url_text, history, api_key_text):
+        async def process_input(topic, website_url, history, api_key):
             nonlocal crew_manager
-            # Use the first available API key
-            effective_api_key = token or api_key_text or default_api_key
+            effective_api_key = token or api_key or default_api_key
             
             if not effective_api_key:
                 history = history or []
-                history.append(("You", f"Question: {inquiry_text}\nDocumentation: {website_url_text}"))
+                history.append(("You", f"Question: {topic}\nDocumentation: {website_url}"))
                 history.append(("Assistant", "Please provide an OpenAI API key."))
                 yield history
                 return
@@ -245,11 +319,11 @@ def registry(name: str, token: str | None = None, **kwargs):
                 crew_manager = CrewManager(api_key=effective_api_key)
 
             history = history or []
-            history.append(("You", f"Question: {inquiry_text}\nDocumentation: {website_url_text}"))
+            history.append(("You", f"Question: {topic}\nDocumentation: {website_url}"))
             yield history
 
             try:
-                async for messages in crew_manager.process_support(inquiry_text, website_url_text):
+                async for messages in crew_manager.process_support(topic, website_url, crew_type):
                     for msg in messages:
                         if msg.get("role") == "user":
                             history.append(("You", msg["content"]))
@@ -267,16 +341,15 @@ def registry(name: str, token: str | None = None, **kwargs):
             return {
                 api_key: gr.Textbox(visible=False),
                 chatbot: gr.Chatbot(visible=True),
-                inquiry: gr.Textbox(visible=True),
+                topic: gr.Textbox(visible=True),
                 website_url: gr.Textbox(visible=True),
                 btn: gr.Button(visible=True)
             }
 
-        # Only set up API key submission if no default key exists
         if not (token or default_api_key):
-            api_key.submit(show_interface, None, [api_key, chatbot, inquiry, website_url, btn])
+            api_key.submit(show_interface, None, [api_key, chatbot, topic, website_url, btn])
         
-        btn.click(process_input, [inquiry, website_url, chatbot, api_key], [chatbot])
-        inquiry.submit(process_input, [inquiry, website_url, chatbot, api_key], [chatbot])
+        btn.click(process_input, [topic, website_url, chatbot, api_key], [chatbot])
+        topic.submit(process_input, [topic, website_url, chatbot, api_key], [chatbot])
 
     return demo
