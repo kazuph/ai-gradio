@@ -88,6 +88,32 @@ interface = gr.load(
 ).launch()
 ```
 
+### CrewAI Types
+The CrewAI integration supports different specialized agent teams:
+
+- `support`: A team of support agents that help answer questions, including:
+  - Senior Support Representative
+  - Support Quality Assurance Specialist
+
+- `article`: A team of content creation agents, including:
+  - Content Planner
+  - Content Writer
+  - Editor
+
+You can specify the crew type when creating the interface:
+
+```python
+interface = gr.load(
+    name='crewai:gpt-4-turbo',
+    src=registry,
+    crew_type='article',  # or 'support'
+    title='AI Writing Team',
+    description='Create articles with a team of AI agents'
+).launch()
+```
+
+When using the `support` crew type, you can provide a documentation URL that the agents will reference when answering questions. The interface will automatically show a URL input field.
+
 ### Customization
 
 You can customize the interface by adding examples, changing the title, or adding a description:
@@ -164,12 +190,32 @@ os.environ["OPENAI_API_KEY"] = "your-api-key"
 os.environ["GEMINI_API_KEY"] = "your-api-key"
 ```
 
+### No Providers Error
+If you see an error about no providers being installed, make sure you've installed the package with the desired provider:
+
+```bash
+# Install with OpenAI support
+pip install 'ai-gradio[openai]'
+
+# Install with Gemini support
+pip install 'ai-gradio[gemini]'
+
+# Install with CrewAI support
+pip install 'ai-gradio[crewai]'
+
+# Install all providers
+pip install 'ai-gradio[all]'
+```
+
 ## Optional Dependencies
 
 For voice chat functionality:
 - gradio-webrtc
 - numba==0.60.0
 - pydub
+- librosa
+- websockets
+- twilio
 
 For video chat functionality:
 - opencv-python
