@@ -1,6 +1,6 @@
 # `ai-gradio`
 
-A Python package that makes it easy for developers to create machine learning apps powered by OpenAI and Google's Gemini models.
+A Python package that makes it easy for developers to create machine learning apps powered by OpenAI, Google's Gemini models, and CrewAI.
 
 ## Installation
 
@@ -12,6 +12,9 @@ pip install 'ai-gradio[openai]'
 
 # Install with Gemini support  
 pip install 'ai-gradio[gemini]'
+
+# Install with CrewAI support
+pip install 'ai-gradio[crewai]'
 
 # Install with all providers
 pip install 'ai-gradio[all]'
@@ -73,6 +76,18 @@ interface = gr.load(
 ).launch()
 ```
 
+### AI Agent Teams with CrewAI
+CrewAI support allows you to create teams of AI agents that work together to solve complex tasks. Enable it by using the CrewAI provider:
+
+```python
+interface = gr.load(
+    name='crewai:gpt-4-turbo',
+    src=registry,
+    title='AI Team Chat',
+    description='Chat with a team of specialized AI agents'
+).launch()
+```
+
 ### Customization
 
 You can customize the interface by adding examples, changing the title, or adding a description:
@@ -103,6 +118,8 @@ with gr.Blocks() as demo:
         gr.load('gpt-4-turbo', src=registry)
     with gr.Tab("Gemini"):
         gr.load('gemini-pro', src=registry)
+    with gr.Tab("CrewAI"):
+        gr.load('crewai:gpt-4-turbo', src=registry)
 
 demo.launch()
 ```
@@ -118,6 +135,11 @@ demo.launch()
 - gemini-pro
 - gemini-pro-vision
 
+### CrewAI Models
+- crewai:gpt-4-turbo
+- crewai:gpt-4
+- crewai:gpt-3.5-turbo
+
 ## Requirements
 
 - Python 3.10 or higher
@@ -126,6 +148,7 @@ demo.launch()
 Additional dependencies are installed based on your chosen provider:
 - OpenAI: `openai>=1.58.1`
 - Gemini: `google-generativeai`
+- CrewAI: `crewai>=0.1.0`, `langchain>=0.1.0`, `langchain-openai>=0.0.2`
 
 ## Troubleshooting
 
