@@ -1,90 +1,153 @@
-# `openai-gradio`
+# `ai-gradio`
 
-is a Python package that makes it very easy for developers to create machine learning apps that are powered by OpenAI's API.
+A Python package that makes it easy for developers to create machine learning apps powered by OpenAI and Google's Gemini models.
 
-# Installation
+## Installation
 
-You can install `openai-gradio` directly using pip:
+You can install `ai-gradio` with different providers:
 
 ```bash
-pip install openai-gradio
+# Install with OpenAI support
+pip install 'ai-gradio[openai]'
+
+# Install with Gemini support  
+pip install 'ai-gradio[gemini]'
+
+# Install with all providers
+pip install 'ai-gradio[all]'
 ```
 
-That's it! 
+## Basic Usage
 
-# Basic Usage
+First, set your API key in the environment:
 
-Just like if you were to use the `openai` API, you should first save your OpenAI API key to this environment variable:
-
-```
+For OpenAI:
+```bash
 export OPENAI_API_KEY=<your token>
 ```
 
-Then in a Python file, write:
+For Gemini:
+```bash
+export GEMINI_API_KEY=<your token>
+```
+
+Then in a Python file:
 
 ```python
 import gradio as gr
-import openai_gradio
+from ai_gradio import registry
 
-gr.load(
-    name='gpt-4-turbo',
-    src=openai_gradio.registry,
+# Create a Gradio interface
+interface = gr.load(
+    name='gpt-4-turbo',  # or 'gemini-pro' for Gemini
+    src=registry,
+    title='AI Chat',
+    description='Chat with an AI model'
 ).launch()
 ```
 
-Run the Python file, and you should see a Gradio Interface connected to the model on OpenAI!
+## Features
 
-![ChatInterface](chatinterface.png)
+### Text Chat
+Basic text chat is supported for all models. The interface provides a chat-like experience where you can have conversations with the AI model.
 
-# Customization 
+### Voice Chat (OpenAI only)
+Voice chat is supported for OpenAI models. You can enable it by setting `enable_voice=True`:
 
-Once you can create a Gradio UI from an OpenAI endpoint, you can customize it by setting your own input and output components, or any other arguments to `gr.Interface`. For example, the screenshot below was generated with:
-
-```py
-import gradio as gr
-import openai_gradio
-
-gr.load(
+```python
+interface = gr.load(
     name='gpt-4-turbo',
-    src=openai_gradio.registry,
-    title='OpenAI-Gradio Integration',
-    description="Chat with GPT-4-turbo model.",
-    examples=["Explain quantum gravity to a 5-year old.", "How many R are there in the word Strawberry?"]
+    src=registry,
+    enable_voice=True
 ).launch()
 ```
-![ChatInterface with customizations](chatinterface_with_customization.png)
 
-# Composition
+### Video Chat (Gemini only)
+Video chat is supported for Gemini models. You can enable it by setting `enable_video=True`:
 
-Or use your loaded Interface within larger Gradio Web UIs, e.g.
+```python
+interface = gr.load(
+    name='gemini-pro',
+    src=registry,
+    enable_video=True
+).launch()
+```
+
+### Customization
+
+You can customize the interface by adding examples, changing the title, or adding a description:
+
+```python
+interface = gr.load(
+    name='gpt-4-turbo',
+    src=registry,
+    title='Custom AI Chat',
+    description='Chat with an AI assistant',
+    examples=[
+        "Explain quantum computing to a 5-year old",
+        "What's the difference between machine learning and AI?"
+    ]
+).launch()
+```
+
+### Composition
+
+You can combine multiple models in a single interface using Gradio's Blocks:
 
 ```python
 import gradio as gr
-import openai_gradio
+from ai_gradio import registry
 
 with gr.Blocks() as demo:
-    with gr.Tab("GPT-4-turbo"):
-        gr.load('gpt-4-turbo', src=openai_gradio.registry)
-    with gr.Tab("GPT-3.5-turbo"):
-        gr.load('gpt-3.5-turbo', src=openai_gradio.registry)
+    with gr.Tab("GPT-4"):
+        gr.load('gpt-4-turbo', src=registry)
+    with gr.Tab("Gemini"):
+        gr.load('gemini-pro', src=registry)
 
 demo.launch()
 ```
 
-# Under the Hood
+## Supported Models
 
-The `openai-gradio` Python library has two dependencies: `openai` and `gradio`. It defines a "registry" function `openai_gradio.registry`, which takes in a model name and returns a Gradio app.
+### OpenAI Models
+- gpt-4-turbo
+- gpt-4
+- gpt-3.5-turbo
 
-# Supported Models in OpenAI
+### Gemini Models
+- gemini-pro
+- gemini-pro-vision
 
-All chat API models supported by OpenAI are compatible with this integration. For a comprehensive list of available models and their specifications, please refer to the [OpenAI Models documentation](https://platform.openai.com/docs/models).
+## Requirements
 
--------
+- Python 3.10 or higher
+- gradio >= 5.9.1
 
-Note: if you are getting a 401 authentication error, then the OpenAI API Client is not able to get the API token from the environment variable. This happened to me as well, in which case save it in your Python session, like this:
+Additional dependencies are installed based on your chosen provider:
+- OpenAI: `openai>=1.58.1`
+- Gemini: `google-generativeai`
 
-```py
+## Troubleshooting
+
+If you get a 401 authentication error, make sure your API key is properly set. You can set it manually in your Python session:
+
+```python
 import os
 
-os.environ["OPENAI_API_KEY"] = ...
+# For OpenAI
+os.environ["OPENAI_API_KEY"] = "your-api-key"
+
+# For Gemini
+os.environ["GEMINI_API_KEY"] = "your-api-key"
 ```
+
+## Optional Dependencies
+
+For voice chat functionality:
+- gradio-webrtc
+- numba==0.60.0
+- pydub
+
+For video chat functionality:
+- opencv-python
+- Pillow

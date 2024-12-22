@@ -1,7 +1,8 @@
 import gradio as gr
-import openai_gradio
+import ai_gradio
 
-gr.load(
-    name='gpt-4o-2024-11-20',
-    src=openai_gradio.registry,
+# For CrewAI
+interface = gr.load(
+    name='crewai:gpt-4-turbo',  # Explicitly use CrewAI provider
+    src=ai_gradio.registry,
 ).launch()
