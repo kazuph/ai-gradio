@@ -52,6 +52,7 @@ crewai = [
 ]
 anthropic = ["anthropic>=1.0.0"]
 lumaai = ["lumaai>=0.0.3"]
+xai = ["openai>=1.58.1"]
 all = [
     "openai>=1.58.1",
     "google-generativeai",

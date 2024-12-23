@@ -63,6 +63,15 @@ try:
 except ImportError:
     pass
 
+try:
+    from .xai_gradio import registry as xai_registry
+    registry.update({f"xai:{k}": xai_registry for k in [
+        'grok-beta',
+        'grok-vision-beta'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -71,6 +80,7 @@ if not registry:
         "pip install 'ai-gradio[crewai]' for CrewAI support\n"
         "pip install 'ai-gradio[anthropic]' for Anthropic support\n"
         "pip install 'ai-gradio[lumaai]' for LumaAI support\n"
+        "pip install 'ai-gradio[xai]' for X.AI support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 
