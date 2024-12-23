@@ -65,6 +65,20 @@ interface = gr.load(
 ).launch()
 ```
 
+### Voice Chat Configuration
+
+When using voice chat functionality, you can optionally configure Twilio credentials for better WebRTC performance:
+
+```python
+interface = gr.load(
+    name='gpt-4-turbo',
+    src=registry,
+    enable_voice=True,
+    twilio_sid='your_twilio_sid',  # Optional
+    twilio_token='your_twilio_token'  # Optional
+).launch()
+```
+
 ### Video Chat (Gemini only)
 Video chat is supported for Gemini models. You can enable it by setting `enable_video=True`:
 
@@ -114,6 +128,17 @@ interface = gr.load(
 
 When using the `support` crew type, you can provide a documentation URL that the agents will reference when answering questions. The interface will automatically show a URL input field.
 
+### Provider Selection
+
+When loading a model, you can specify the provider explicitly using the format `provider:model_name`. 
+```python
+# Explicit provider
+interface = gr.load(
+    name='gemini:gemini-pro',
+    src=registry
+).launch()
+```
+
 ### Customization
 
 You can customize the interface by adding examples, changing the title, or adding a description:
@@ -160,6 +185,7 @@ demo.launch()
 ### Gemini Models
 - gemini-pro
 - gemini-pro-vision
+- gemini-2.0-flash-exp
 
 ### CrewAI Models
 - crewai:gpt-4-turbo
@@ -174,7 +200,7 @@ demo.launch()
 Additional dependencies are installed based on your chosen provider:
 - OpenAI: `openai>=1.58.1`
 - Gemini: `google-generativeai`
-- CrewAI: `crewai>=0.1.0`, `langchain>=0.1.0`, `langchain-openai>=0.0.2`
+- CrewAI: `crewai>=0.1.0`, `langchain>=0.1.0`, `langchain-openai>=0.0.2`, `crewai-tools>=0.0.1`
 
 ## Troubleshooting
 
@@ -216,6 +242,8 @@ For voice chat functionality:
 - librosa
 - websockets
 - twilio
+- gradio_webrtc[vad]
+- numpy
 
 For video chat functionality:
 - opencv-python
