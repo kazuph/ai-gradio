@@ -28,8 +28,7 @@ dependencies = [
     "pydub",
     "gradio_webrtc[vad]",
     "numba==0.60.0",
-    "python-dotenv",
-    "asyncio"
+    "python-dotenv"
 ]
 
 [project.urls]
