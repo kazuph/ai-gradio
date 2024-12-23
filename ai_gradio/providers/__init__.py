@@ -40,12 +40,26 @@ try:
 except ImportError:
     pass
 
+try:
+    from .anthropic_gradio import registry as anthropic_registry
+    registry.update({f"anthropic:{k}": anthropic_registry for k in [
+        'claude-3-opus-20240229',
+        'claude-3-sonnet-20240229',
+        'claude-3-haiku-20240307',
+        'claude-2.1',
+        'claude-2.0',
+        'claude-instant-1.2'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
         "pip install 'ai-gradio[openai]' for OpenAI support\n"
         "pip install 'ai-gradio[gemini]' for Gemini support\n"
         "pip install 'ai-gradio[crewai]' for CrewAI support\n"
+        "pip install 'ai-gradio[anthropic]' for Anthropic support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 

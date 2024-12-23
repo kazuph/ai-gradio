@@ -281,7 +281,8 @@ def registry(name: str, token: str | None = None, crew_type: str = "support", **
             show_label=True,
             visible=token or default_api_key,
             avatar_images=(None, "https://avatars.githubusercontent.com/u/170677839?v=4"),
-            render_markdown=True
+            render_markdown=True,
+            type="messages"
         )
         
         with gr.Row(equal_height=True):
@@ -309,33 +310,40 @@ def registry(name: str, token: str | None = None, crew_type: str = "support", **
             effective_api_key = token or api_key or default_api_key
             
             if not effective_api_key:
-                history = history or []
-                history.append(("You", f"Question: {topic}\nDocumentation: {website_url}"))
-                history.append(("Assistant", "Please provide an OpenAI API key."))
-                yield history
-                return
+                yield [
+                    {"role": "user", "content": f"Question: {topic}\nDocumentation: {website_url}"},
+                    {"role": "assistant", "content": "Please provide an OpenAI API key."}
+                ]
+                return  # Early return without value
 
             if crew_manager is None:
                 crew_manager = CrewManager(api_key=effective_api_key)
 
-            history = history or []
-            history.append(("You", f"Question: {topic}\nDocumentation: {website_url}"))
-            yield history
+            messages = [{"role": "user", "content": f"Question: {topic}\nDocumentation: {website_url}"}]
+            yield messages
 
             try:
-                async for messages in crew_manager.process_support(topic, website_url, crew_type):
-                    for msg in messages:
-                        if msg.get("role") == "user":
-                            history.append(("You", msg["content"]))
+                async for new_messages in crew_manager.process_support(topic, website_url, crew_type):
+                    for msg in new_messages:
+                        if "metadata" in msg:
+                            messages.append({
+                                "role": msg["role"],
+                                "content": msg["content"],
+                                "metadata": {"title": msg["metadata"]["title"]}
+                            })
                         else:
-                            content = msg["content"]
-                            if "metadata" in msg and "title" in msg["metadata"]:
-                                content = f"**{msg['metadata']['title']}**\n\n{content}"
-                            history.append(("Assistant", content))
-                    yield history
+                            messages.append({
+                                "role": msg["role"],
+                                "content": msg["content"]
+                            })
+                    yield messages
             except Exception as e:
-                history.append(("Assistant", f"An error occurred: {str(e)}"))
-                yield history
+                messages.append({
+                    "role": "assistant", 
+                    "content": f"An error occurred: {str(e)}",
+                    "metadata": {"title": "❌ Error"}
+                })
+                yield messages
 
         def show_interface():
             return {

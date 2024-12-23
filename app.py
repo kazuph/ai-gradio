@@ -3,9 +3,9 @@ from ai_gradio import registry
 
 # Create a Gradio interface
 interface = gr.load(
-    name='gpt-4o-mini-realtime-preview-2024-12-17',  # or 'gemini-pro' for Gemini
+    name='crewai:gpt-4-turbo',
     src=registry,
-    title='openai chat',
-    description='Chat with an AI model',
-    enable_voice=True,
+    crew_type='article',  # or 'support'
+    title='AI Writing Team',
+    description='Create articles with a team of AI agents'
 ).launch()

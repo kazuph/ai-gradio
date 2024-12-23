@@ -50,13 +50,15 @@ crewai = [
     "langchain-openai>=0.0.2",
     "crewai-tools>=0.0.1"
 ]
+anthropic = ["anthropic>=1.0.0"]
 all = [
     "openai>=1.58.1",
     "google-generativeai",
     "crewai>=0.1.0",
     "langchain>=0.1.0",
     "langchain-openai>=0.0.2",
-    "crewai-tools>=0.0.1"
+    "crewai-tools>=0.0.1",
+    "anthropic>=1.0.0"
 ]
 
 [tool.hatch.build.targets.wheel]
