@@ -225,7 +225,6 @@ def registry(name: str, token: str | None = None, twilio_sid: str | None = None,
         # New chat interface implementation
         interface = gr.ChatInterface(
             fn=get_fn(api_key, model),
-            title="OpenAI Chat",
             **kwargs
         )
 

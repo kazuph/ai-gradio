@@ -1,9 +1,10 @@
 import gradio as gr
-import ai_gradio
+from ai_gradio import registry
 
-# For CrewAI
+# Create a Gradio interface
 interface = gr.load(
-    name='crewai:gpt-4-turbo',  # Explicitly use CrewAI provider
-    src=ai_gradio.registry,
-    crew_type="support"
+    name='gpt-4-turbo',  # or 'gemini-pro' for Gemini
+    src=registry,
+    title='openai chat',
+    description='Chat with an AI model'
 ).launch()

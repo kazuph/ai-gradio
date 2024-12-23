@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.1.0"
+version = "0.1.2"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -29,10 +29,7 @@ dependencies = [
     "gradio_webrtc[vad]",
     "numba==0.60.0",
     "python-dotenv",
-    "asyncio",
-    "base64",
-    "queue",
-    "threading"
+    "asyncio"
 ]
 
 [project.urls]
