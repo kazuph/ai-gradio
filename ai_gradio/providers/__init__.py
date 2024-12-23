@@ -53,6 +53,16 @@ try:
 except ImportError:
     pass
 
+try:
+    from .lumaai_gradio import registry as lumaai_registry
+    registry.update({f"lumaai:{k}": lumaai_registry for k in [
+        'dream-machine',
+        'photon-1',
+        'photon-flash-1'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -60,6 +70,7 @@ if not registry:
         "pip install 'ai-gradio[gemini]' for Gemini support\n"
         "pip install 'ai-gradio[crewai]' for CrewAI support\n"
         "pip install 'ai-gradio[anthropic]' for Anthropic support\n"
+        "pip install 'ai-gradio[lumaai]' for LumaAI support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 

@@ -3,6 +3,6 @@ import ai_gradio
 
 # Create a Gradio interface
 interface = gr.load(
-    name='anthropic:claude-3-opus-20240229',
+    name='lumaai:dream-machine',
     src=ai_gradio.registry,
 ).launch()
