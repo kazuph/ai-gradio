@@ -1,6 +1,6 @@
 # `ai-gradio`
 
-A Python package that makes it easy for developers to create machine learning apps powered by OpenAI, Google's Gemini models, Anthropic's Claude, LumaAI, and CrewAI.
+A Python package that makes it easy for developers to create machine learning apps powered by OpenAI, Google's Gemini models, Anthropic's Claude, LumaAI, CrewAI, and XAI's Grok.
 
 ## Installation
 
@@ -21,6 +21,9 @@ pip install 'ai-gradio[anthropic]'
 
 # Install with LumaAI support
 pip install 'ai-gradio[lumaai]'
+
+# Install with XAI support
+pip install 'ai-gradio[xai]'
 
 # Install with all providers
 pip install 'ai-gradio[all]'
@@ -50,6 +53,11 @@ For LumaAI:
 export LUMAAI_API_KEY=<your token>
 ```
 
+For XAI:
+```bash
+export XAI_API_KEY=<your token>
+```
+
 Then in a Python file:
 
 ```python
@@ -58,7 +66,7 @@ from ai_gradio import registry
 
 # Create a Gradio interface
 interface = gr.load(
-    name='gpt-4-turbo',  # or 'gemini-pro' for Gemini
+    name='gpt-4-turbo',  # or 'gemini-pro' for Gemini, or 'xai:grok-beta' for Grok
     src=registry,
     title='AI Chat',
     description='Chat with an AI model'
@@ -236,6 +244,8 @@ with gr.Blocks() as demo:
         gr.load('lumaai:dream-machine', src=registry)
     with gr.Tab("CrewAI"):
         gr.load('crewai:gpt-4-turbo', src=registry)
+    with gr.Tab("Grok"):
+        gr.load('xai:grok-beta', src=registry)
 
 demo.launch()
 ```
@@ -270,6 +280,10 @@ demo.launch()
 - crewai:gpt-4
 - crewai:gpt-3.5-turbo
 
+### XAI Models
+- grok-beta
+- grok-vision-beta
+
 ## Requirements
 
 - Python 3.10 or higher
@@ -281,6 +295,7 @@ Additional dependencies are installed based on your chosen provider:
 - CrewAI: `crewai>=0.1.0`, `langchain>=0.1.0`, `langchain-openai>=0.0.2`, `crewai-tools>=0.0.1`
 - Anthropic: `anthropic>=1.0.0`
 - LumaAI: `lumaai>=0.0.3`
+- XAI: `xai>=0.1.0`
 
 ## Troubleshooting
 
@@ -320,6 +335,9 @@ pip install 'ai-gradio[anthropic]'
 
 # Install with LumaAI support
 pip install 'ai-gradio[lumaai]'
+
+# Install with XAI support
+pip install 'ai-gradio[xai]'
 
 # Install all providers
 pip install 'ai-gradio[all]'
