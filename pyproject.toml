@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.0.1"
+version = "0.1.0"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -28,7 +28,11 @@ dependencies = [
     "pydub",
     "gradio_webrtc[vad]",
     "numba==0.60.0",
-    "python-dotenv"
+    "python-dotenv",
+    "asyncio",
+    "base64",
+    "queue",
+    "threading"
 ]
 
 [project.urls]
@@ -36,17 +40,27 @@ homepage = "https://github.com/AK391/ai-gradio"
 repository = "https://github.com/AK391/ai-gradio"
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = [
+    "pytest",
+    "black",
+    "isort",
+    "flake8"
+]
 openai = ["openai>=1.58.1"]
 gemini = ["google-generativeai"]
-all = [
-    "openai>=1.58.1",
-    "google-generativeai"
-]
 crewai = [
     "crewai>=0.1.0",
     "langchain>=0.1.0",
-    "langchain-openai>=0.0.2"
+    "langchain-openai>=0.0.2",
+    "crewai-tools>=0.0.1"
+]
+all = [
+    "openai>=1.58.1",
+    "google-generativeai",
+    "crewai>=0.1.0",
+    "langchain>=0.1.0",
+    "langchain-openai>=0.0.2",
+    "crewai-tools>=0.0.1"
 ]
 
 [tool.hatch.build.targets.wheel]
