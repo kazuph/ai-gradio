@@ -23,7 +23,7 @@ registry = {}
 
 try:
     from .openai_gradio import registry as openai_registry
-    registry.update({f"openai:{k}": openai_registry for k in ['gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo']})
+    registry.update({f"openai:{k}": openai_registry for k in ['gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo', 'gpt-4o-mini-realtime-preview-2024-12-17']})
 except ImportError:
     pass
 

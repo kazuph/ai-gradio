@@ -55,11 +55,18 @@ interface = gr.load(
 Basic text chat is supported for all models. The interface provides a chat-like experience where you can have conversations with the AI model.
 
 ### Voice Chat (OpenAI only)
-Voice chat is supported for OpenAI models. You can enable it by setting `enable_voice=True`:
+Voice chat is supported for OpenAI realtime models. You can enable it in two ways:
 
 ```python
+# Using a realtime model
 interface = gr.load(
-    name='gpt-4-turbo',
+    name='gpt-4o-realtime-preview-2024-10-01',
+    src=registry
+).launch()
+
+# Or explicitly enabling voice chat with any realtime model
+interface = gr.load(
+    name='gpt-4o-mini-realtime-preview-2024-12-17',
     src=registry,
     enable_voice=True
 ).launch()
@@ -67,17 +74,24 @@ interface = gr.load(
 
 ### Voice Chat Configuration
 
-When using voice chat functionality, you can optionally configure Twilio credentials for better WebRTC performance:
+For voice chat functionality, you'll need:
 
-```python
-interface = gr.load(
-    name='gpt-4-turbo',
-    src=registry,
-    enable_voice=True,
-    twilio_sid='your_twilio_sid',  # Optional
-    twilio_token='your_twilio_token'  # Optional
-).launch()
+1. OpenAI API key (required):
+```bash
+export OPENAI_API_KEY=<your OpenAI token>
 ```
+
+2. Twilio credentials (recommended for better WebRTC performance):
+```bash
+export TWILIO_ACCOUNT_SID=<your Twilio account SID>
+export TWILIO_AUTH_TOKEN=<your Twilio auth token>
+```
+
+You can get Twilio credentials by:
+- Creating a free account at Twilio
+- Finding your Account SID and Auth Token in the Twilio Console
+
+Without Twilio credentials, voice chat will still work but might have connectivity issues in some network environments.
 
 ### Video Chat (Gemini only)
 Video chat is supported for Gemini models. You can enable it by setting `enable_video=True`:
