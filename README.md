@@ -1,6 +1,6 @@
 # `ai-gradio`
 
-A Python package that makes it easy for developers to create machine learning apps powered by OpenAI, Google's Gemini models, and CrewAI.
+A Python package that makes it easy for developers to create machine learning apps powered by OpenAI, Google's Gemini models, Anthropic's Claude, LumaAI, and CrewAI.
 
 ## Installation
 
@@ -15,6 +15,12 @@ pip install 'ai-gradio[gemini]'
 
 # Install with CrewAI support
 pip install 'ai-gradio[crewai]'
+
+# Install with Anthropic support
+pip install 'ai-gradio[anthropic]'
+
+# Install with LumaAI support
+pip install 'ai-gradio[lumaai]'
 
 # Install with all providers
 pip install 'ai-gradio[all]'
@@ -32,6 +38,16 @@ export OPENAI_API_KEY=<your token>
 For Gemini:
 ```bash
 export GEMINI_API_KEY=<your token>
+```
+
+For Anthropic:
+```bash
+export ANTHROPIC_API_KEY=<your token>
+```
+
+For LumaAI:
+```bash
+export LUMAAI_API_KEY=<your token>
 ```
 
 Then in a Python file:
@@ -52,7 +68,7 @@ interface = gr.load(
 ## Features
 
 ### Text Chat
-Basic text chat is supported for all models. The interface provides a chat-like experience where you can have conversations with the AI model.
+Basic text chat is supported for all text models. The interface provides a chat-like experience where you can have conversations with the AI model.
 
 ### Voice Chat (OpenAI only)
 Voice chat is supported for OpenAI realtime models. You can enable it in two ways:
@@ -101,6 +117,37 @@ interface = gr.load(
     name='gemini-pro',
     src=registry,
     enable_video=True
+).launch()
+```
+
+### Text Generation with Anthropic Claude
+Anthropic's Claude models are supported for text generation:
+
+```python
+interface = gr.load(
+    name='anthropic:claude-3-opus-20240229',
+    src=registry,
+    title='Claude Chat',
+    description='Chat with Claude'
+).launch()
+```
+
+### AI Video and Image Generation with LumaAI
+LumaAI support allows you to generate videos and images from text prompts:
+
+```python
+# For video generation
+interface = gr.load(
+    name='lumaai:dream-machine',
+    src=registry,
+    title='LumaAI Video Generation'
+).launch()
+
+# For image generation
+interface = gr.load(
+    name='lumaai:photon-1',
+    src=registry,
+    title='LumaAI Image Generation'
 ).launch()
 ```
 
@@ -183,6 +230,10 @@ with gr.Blocks() as demo:
         gr.load('gpt-4-turbo', src=registry)
     with gr.Tab("Gemini"):
         gr.load('gemini-pro', src=registry)
+    with gr.Tab("Claude"):
+        gr.load('anthropic:claude-3-opus-20240229', src=registry)
+    with gr.Tab("LumaAI"):
+        gr.load('lumaai:dream-machine', src=registry)
     with gr.Tab("CrewAI"):
         gr.load('crewai:gpt-4-turbo', src=registry)
 
@@ -201,6 +252,19 @@ demo.launch()
 - gemini-pro-vision
 - gemini-2.0-flash-exp
 
+### Anthropic Models
+- claude-3-opus-20240229
+- claude-3-sonnet-20240229
+- claude-3-haiku-20240307
+- claude-2.1
+- claude-2.0
+- claude-instant-1.2
+
+### LumaAI Models
+- dream-machine (video generation)
+- photon-1 (image generation)
+- photon-flash-1 (fast image generation)
+
 ### CrewAI Models
 - crewai:gpt-4-turbo
 - crewai:gpt-4
@@ -215,6 +279,8 @@ Additional dependencies are installed based on your chosen provider:
 - OpenAI: `openai>=1.58.1`
 - Gemini: `google-generativeai`
 - CrewAI: `crewai>=0.1.0`, `langchain>=0.1.0`, `langchain-openai>=0.0.2`, `crewai-tools>=0.0.1`
+- Anthropic: `anthropic>=1.0.0`
+- LumaAI: `lumaai>=0.0.3`
 
 ## Troubleshooting
 
@@ -228,6 +294,12 @@ os.environ["OPENAI_API_KEY"] = "your-api-key"
 
 # For Gemini
 os.environ["GEMINI_API_KEY"] = "your-api-key"
+
+# For Anthropic
+os.environ["ANTHROPIC_API_KEY"] = "your-api-key"
+
+# For LumaAI
+os.environ["LUMAAI_API_KEY"] = "your-api-key"
 ```
 
 ### No Providers Error
@@ -242,6 +314,12 @@ pip install 'ai-gradio[gemini]'
 
 # Install with CrewAI support
 pip install 'ai-gradio[crewai]'
+
+# Install with Anthropic support
+pip install 'ai-gradio[anthropic]'
+
+# Install with LumaAI support
+pip install 'ai-gradio[lumaai]'
 
 # Install all providers
 pip install 'ai-gradio[all]'
