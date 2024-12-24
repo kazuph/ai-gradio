@@ -25,6 +25,9 @@ pip install 'ai-gradio[lumaai]'
 # Install with XAI support
 pip install 'ai-gradio[xai]'
 
+# Install with Cohere support
+pip install 'ai-gradio[cohere]'
+
 # Install with all providers
 pip install 'ai-gradio[all]'
 ```
@@ -56,6 +59,11 @@ export LUMAAI_API_KEY=<your token>
 For XAI:
 ```bash
 export XAI_API_KEY=<your token>
+```
+
+For Cohere:
+```bash
+export COHERE_API_KEY=<your token>
 ```
 
 Then in a Python file:
@@ -284,6 +292,12 @@ demo.launch()
 - grok-beta
 - grok-vision-beta
 
+### Cohere Models
+- command
+- command-light
+- command-nightly
+- command-r
+
 ## Requirements
 
 - Python 3.10 or higher
@@ -296,6 +310,7 @@ Additional dependencies are installed based on your chosen provider:
 - Anthropic: `anthropic>=1.0.0`
 - LumaAI: `lumaai>=0.0.3`
 - XAI: `xai>=0.1.0`
+- Cohere: `cohere>=5.0.0`
 
 ## Troubleshooting
 
@@ -315,6 +330,12 @@ os.environ["ANTHROPIC_API_KEY"] = "your-api-key"
 
 # For LumaAI
 os.environ["LUMAAI_API_KEY"] = "your-api-key"
+
+# For XAI
+os.environ["XAI_API_KEY"] = "your-api-key"
+
+# For Cohere
+os.environ["COHERE_API_KEY"] = "your-api-key"
 ```
 
 ### No Providers Error
@@ -338,6 +359,9 @@ pip install 'ai-gradio[lumaai]'
 
 # Install with XAI support
 pip install 'ai-gradio[xai]'
+
+# Install with Cohere support
+pip install 'ai-gradio[cohere]'
 
 # Install all providers
 pip install 'ai-gradio[all]'
