@@ -3,6 +3,6 @@ import ai_gradio
 
 # Create a Gradio interface
 interface = gr.load(
-    name='cohere:command-r7b-12-2024',
+    name='sambanova:Meta-Llama-3.3-70B-Instruct',
     src=ai_gradio.registry,
 ).launch()

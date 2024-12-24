@@ -83,6 +83,19 @@ try:
 except ImportError:
     pass
 
+try:
+    from .sambanova_gradio import registry as sambanova_registry
+    registry.update({f"sambanova:{k}": sambanova_registry for k in [
+        'Meta-Llama-3.3-70B-Instruct',
+        'Meta-Llama-3.3-8B-Instruct',
+        'Meta-Llama-3.3-405B-Instruct',
+        'Meta-Llama-3.3-8B-Instruct-Preview',
+        'Meta-Llama-3.3-405B-Instruct-Preview',
+        'Meta-Llama-3.3-70B-Instruct-Preview',
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -93,6 +106,7 @@ if not registry:
         "pip install 'ai-gradio[lumaai]' for LumaAI support\n"
         "pip install 'ai-gradio[xai]' for X.AI support\n"
         "pip install 'ai-gradio[cohere]' for Cohere support\n"
+        "pip install 'ai-gradio[sambanova]' for SambaNova support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 

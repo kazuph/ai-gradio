@@ -54,6 +54,7 @@ anthropic = ["anthropic>=1.0.0"]
 lumaai = ["lumaai>=0.0.3"]
 xai = ["openai>=1.58.1"]
 cohere = ["cohere>=5.0.0"]
+sambanova = ["openai>=1.58.1"]
 all = [
     "openai>=1.58.1",
     "google-generativeai",
@@ -62,8 +63,9 @@ all = [
     "langchain-openai>=0.0.2",
     "crewai-tools>=0.0.1",
     "anthropic>=1.0.0",
-    "lumaai>=0.0.3"
-    "cohere>=5.0.0"
+    "lumaai>=0.0.3",
+    "cohere>=5.0.0",
+    "sambanova>=0.0.1"
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -28,6 +28,9 @@ pip install 'ai-gradio[xai]'
 # Install with Cohere support
 pip install 'ai-gradio[cohere]'
 
+# Install with SambaNova support
+pip install 'ai-gradio[sambanova]'
+
 # Install with all providers
 pip install 'ai-gradio[all]'
 ```
@@ -64,6 +67,11 @@ export XAI_API_KEY=<your token>
 For Cohere:
 ```bash
 export COHERE_API_KEY=<your token>
+```
+
+For SambaNova:
+```bash
+export SAMBANOVA_API_KEY=<your token>
 ```
 
 Then in a Python file:
@@ -298,6 +306,13 @@ demo.launch()
 - command-nightly
 - command-r
 
+### SambaNova Models
+- llama2-70b-chat
+- llama2-13b-chat
+- llama2-7b-chat
+- mixtral-8x7b-chat
+- mistral-7b-chat
+
 ## Requirements
 
 - Python 3.10 or higher
@@ -336,6 +351,9 @@ os.environ["XAI_API_KEY"] = "your-api-key"
 
 # For Cohere
 os.environ["COHERE_API_KEY"] = "your-api-key"
+
+# For SambaNova
+os.environ["SAMBANOVA_API_KEY"] = "your-api-key"
 ```
 
 ### No Providers Error
