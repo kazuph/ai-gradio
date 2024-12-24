@@ -3,6 +3,6 @@ import ai_gradio
 
 # Create a Gradio interface
 interface = gr.load(
-    name='xai:grok-beta',
+    name='cohere:command-r7b-12-2024',
     src=ai_gradio.registry,
 ).launch()

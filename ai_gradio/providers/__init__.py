@@ -72,6 +72,17 @@ try:
 except ImportError:
     pass
 
+try:
+    from .cohere_gradio import registry as cohere_registry
+    registry.update({f"cohere:{k}": cohere_registry for k in [
+        'command-r7b-12-2024',
+        'command-light',
+        'command-nightly',
+        'command-light-nightly'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -81,6 +92,7 @@ if not registry:
         "pip install 'ai-gradio[anthropic]' for Anthropic support\n"
         "pip install 'ai-gradio[lumaai]' for LumaAI support\n"
         "pip install 'ai-gradio[xai]' for X.AI support\n"
+        "pip install 'ai-gradio[cohere]' for Cohere support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 
