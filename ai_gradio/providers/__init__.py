@@ -86,12 +86,13 @@ except ImportError:
 try:
     from .sambanova_gradio import registry as sambanova_registry
     registry.update({f"sambanova:{k}": sambanova_registry for k in [
+        'Meta-Llama-3.1-405B-Instruct',
+        'Meta-Llama-3.1-8B-Instruct',
+        'Meta-Llama-3.1-70B-Instruct',
+        'Meta-Llama-3.1-405B-Instruct-Preview',
+        'Meta-Llama-3.1-8B-Instruct-Preview',
         'Meta-Llama-3.3-70B-Instruct',
-        'Meta-Llama-3.3-8B-Instruct',
-        'Meta-Llama-3.3-405B-Instruct',
-        'Meta-Llama-3.3-8B-Instruct-Preview',
-        'Meta-Llama-3.3-405B-Instruct-Preview',
-        'Meta-Llama-3.3-70B-Instruct-Preview',
+        'Meta-Llama-3.2-3B-Instruct',
     ]})
 except ImportError:
     pass
