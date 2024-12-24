@@ -3,6 +3,6 @@ import ai_gradio
 
 # Create a Gradio interface
 interface = gr.load(
-    name='sambanova:Meta-Llama-3.3-70B-Instruct',
+    name='hyperbolic:Qwen/QwQ-32B-Preview',
     src=ai_gradio.registry,
 ).launch()

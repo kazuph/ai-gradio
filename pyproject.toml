@@ -55,6 +55,7 @@ lumaai = ["lumaai>=0.0.3"]
 xai = ["openai>=1.58.1"]
 cohere = ["cohere>=5.0.0"]
 sambanova = ["openai>=1.58.1"]
+hyperbolic = ["openai>=1.58.1"]
 all = [
     "openai>=1.58.1",
     "google-generativeai",
@@ -65,7 +66,8 @@ all = [
     "anthropic>=1.0.0",
     "lumaai>=0.0.3",
     "cohere>=5.0.0",
-    "sambanova>=0.0.1"
+    "sambanova>=0.0.1",
+    "hyperbolic>=1.58.1"
 ]
 
 [tool.hatch.build.targets.wheel]

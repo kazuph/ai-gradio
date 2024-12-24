@@ -97,6 +97,24 @@ try:
 except ImportError:
     pass
 
+try:
+    from .hyperbolic_gradio import registry as hyperbolic_registry
+    registry.update({f"hyperbolic:{k}": hyperbolic_registry for k in [
+        'meta-llama/llama-3.3-70b',
+        'Qwen/QwQ-32B-Preview',
+        'Qwen/qwen2.5-coder-32b',
+        'meta-llama/llama-3.2-3b',
+        'Qwen/qwen2.5-72b',
+        'deepseek/deepseek-v2.5',
+        'meta-llama/llama-3-70b',
+        'hermes/hermes-3-70b',
+        'meta-llama/llama-3.1-405b',
+        'meta-llama/llama-3.1-70b',
+        'meta-llama/llama-3.1-8b'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -108,6 +126,7 @@ if not registry:
         "pip install 'ai-gradio[xai]' for X.AI support\n"
         "pip install 'ai-gradio[cohere]' for Cohere support\n"
         "pip install 'ai-gradio[sambanova]' for SambaNova support\n"
+        "pip install 'ai-gradio[hyperbolic]' for Hyperbolic support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 
