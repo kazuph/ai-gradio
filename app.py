@@ -3,6 +3,6 @@ import ai_gradio
 
 # Create a Gradio interface
 interface = gr.load(
-    name='hyperbolic:Qwen/QwQ-32B-Preview',
+    name='qwen:qvq-72b-preview',
     src=ai_gradio.registry,
 ).launch()

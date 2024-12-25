@@ -115,6 +115,24 @@ try:
 except ImportError:
     pass
 
+try:
+    from .qwen_gradio import registry as qwen_registry
+    registry.update({f"qwen:{k}": qwen_registry for k in [
+        "qwen-turbo-latest",
+        "qwen-turbo",
+        "qwen-plus",
+        "qwen-max",
+        "qwen1.5-110b-chat",
+        "qwen1.5-72b-chat",
+        "qwen1.5-32b-chat",
+        "qwen1.5-14b-chat",
+        "qwen1.5-7b-chat",
+        "qwq-32b-preview",
+        'qvq-72b-preview'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -127,6 +145,7 @@ if not registry:
         "pip install 'ai-gradio[cohere]' for Cohere support\n"
         "pip install 'ai-gradio[sambanova]' for SambaNova support\n"
         "pip install 'ai-gradio[hyperbolic]' for Hyperbolic support\n"
+        "pip install 'ai-gradio[qwen]' for Qwen support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 

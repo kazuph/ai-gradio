@@ -56,6 +56,7 @@ xai = ["openai>=1.58.1"]
 cohere = ["cohere>=5.0.0"]
 sambanova = ["openai>=1.58.1"]
 hyperbolic = ["openai>=1.58.1"]
+qwen = ["openai>=1.58.1"]
 all = [
     "openai>=1.58.1",
     "google-generativeai",
