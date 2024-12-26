@@ -83,6 +83,11 @@ For SambaNova:
 export SAMBANOVA_API_KEY=<your token>
 ```
 
+For DeepSeek:
+```bash
+export DEEPSEEK_API_KEY=<your token>
+```
+
 Then in a Python file:
 
 ```python
@@ -385,6 +390,7 @@ Additional dependencies are installed based on your chosen provider:
 - LumaAI: `lumaai>=0.0.3`
 - XAI: `xai>=0.1.0`
 - Cohere: `cohere>=5.0.0`
+- DeepSeek: `openai>=1.58.1`
 
 ### Fireworks: `openai>=1.58.1`
 ### Together: `openai>=1.58.1`
@@ -430,6 +436,7 @@ os.environ["FIREWORKS_API_KEY"] = "your-api-key"
 os.environ["TOGETHER_API_KEY"] = "your-api-key"
 os.environ["QWEN_API_KEY"] = "your-api-key"
 os.environ["HYPERBOLIC_API_KEY"] = "your-api-key"
+os.environ["DEEPSEEK_API_KEY"] = "your-api-key"
 
 ### No Providers Error
 If you see an error about no providers being installed, make sure you've installed the package with the desired provider:
@@ -475,3 +482,43 @@ For voice chat functionality:
 For video chat functionality:
 - opencv-python
 - Pillow
+
+For DeepSeek:
+```bash
+export DEEPSEEK_API_KEY=<your token>
+```
+
+# Environment variables additions:
+os.environ["DEEPSEEK_API_KEY"] = "your-api-key"
+
+### Text Generation with DeepSeek
+DeepSeek models support text generation and coding assistance:
+
+```python
+import gradio as gr
+from ai_gradio import registry
+
+# For text chat
+interface = gr.load(
+    name='deepseek:deepseek-chat',
+    src=registry,
+    title='DeepSeek Chat',
+    description='Chat with DeepSeek'
+).launch()
+
+# For code assistance
+interface = gr.load(
+    name='deepseek:deepseek-coder',
+    src=registry,
+    title='DeepSeek Coder',
+    description='Get coding help from DeepSeek'
+).launch()
+
+# For vision tasks
+interface = gr.load(
+    name='deepseek:deepseek-vision',
+    src=registry,
+    title='DeepSeek Vision',
+    description='Visual understanding with DeepSeek'
+).launch()
+```
