@@ -39,6 +39,9 @@ pip install 'ai-gradio[fireworks]'
 pip install 'ai-gradio[together]'
 pip install 'ai-gradio[qwen]'
 pip install 'ai-gradio[hyperbolic]'
+
+# Install with DeepSeek support
+pip install 'ai-gradio[deepseek]'
 ```
 
 ## Basic Usage
@@ -363,6 +366,11 @@ demo.launch()
 - meta-llama/llama-3.1-405b
 - meta-llama/llama-3.1-70b
 - meta-llama/llama-3.1-8b
+
+### DeepSeek Models
+- deepseek-chat
+- deepseek-coder
+- deepseek-vision
 
 ## Requirements
 

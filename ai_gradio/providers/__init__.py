@@ -199,6 +199,16 @@ try:
 except ImportError:
     pass
 
+try:
+    from .deepseek_gradio import registry as deepseek_registry
+    registry.update({f"deepseek:{k}": deepseek_registry for k in [
+        'deepseek-chat',
+        'deepseek-coder',
+        'deepseek-vision'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -213,6 +223,7 @@ if not registry:
         "pip install 'ai-gradio[hyperbolic]' for Hyperbolic support\n"
         "pip install 'ai-gradio[qwen]' for Qwen support\n"
         "pip install 'ai-gradio[fireworks]' for Fireworks support\n"
+        "pip install 'ai-gradio[deepseek]' for DeepSeek support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 

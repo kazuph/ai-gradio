@@ -72,6 +72,7 @@ all = [
 ]
 fireworks = ["openai>=1.58.1"]
 together = ["openai>=1.58.1"]
+deepseek = ["openai>=1.58.1"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
