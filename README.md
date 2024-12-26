@@ -158,6 +158,34 @@ interface = gr.load(
 ).launch()
 ```
 
+### Text Generation with DeepSeek
+DeepSeek models support text generation and coding assistance:
+
+```python
+interface = gr.load(
+    name='deepseek:deepseek-chat',
+    src=registry,
+    title='DeepSeek Chat',
+    description='Chat with DeepSeek'
+).launch()
+
+# For code assistance
+interface = gr.load(
+    name='deepseek:deepseek-coder',
+    src=registry,
+    title='DeepSeek Coder',
+    description='Get coding help from DeepSeek'
+).launch()
+
+# For vision tasks
+interface = gr.load(
+    name='deepseek:deepseek-vision',
+    src=registry,
+    title='DeepSeek Vision',
+    description='Visual understanding with DeepSeek'
+).launch()
+```
+
 ### Text Generation with Anthropic Claude
 Anthropic's Claude models are supported for text generation:
 
@@ -483,42 +511,4 @@ For video chat functionality:
 - opencv-python
 - Pillow
 
-For DeepSeek:
-```bash
-export DEEPSEEK_API_KEY=<your token>
-```
 
-# Environment variables additions:
-os.environ["DEEPSEEK_API_KEY"] = "your-api-key"
-
-### Text Generation with DeepSeek
-DeepSeek models support text generation and coding assistance:
-
-```python
-import gradio as gr
-from ai_gradio import registry
-
-# For text chat
-interface = gr.load(
-    name='deepseek:deepseek-chat',
-    src=registry,
-    title='DeepSeek Chat',
-    description='Chat with DeepSeek'
-).launch()
-
-# For code assistance
-interface = gr.load(
-    name='deepseek:deepseek-coder',
-    src=registry,
-    title='DeepSeek Coder',
-    description='Get coding help from DeepSeek'
-).launch()
-
-# For vision tasks
-interface = gr.load(
-    name='deepseek:deepseek-vision',
-    src=registry,
-    title='DeepSeek Vision',
-    description='Visual understanding with DeepSeek'
-).launch()
-```
