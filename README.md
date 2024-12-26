@@ -33,6 +33,12 @@ pip install 'ai-gradio[sambanova]'
 
 # Install with all providers
 pip install 'ai-gradio[all]'
+
+# Installation additions:
+pip install 'ai-gradio[fireworks]'
+pip install 'ai-gradio[together]'
+pip install 'ai-gradio[qwen]'
+pip install 'ai-gradio[hyperbolic]'
 ```
 
 ## Basic Usage
@@ -313,6 +319,51 @@ demo.launch()
 - mixtral-8x7b-chat
 - mistral-7b-chat
 
+### Fireworks Models
+- whisper-v3
+- whisper-v3-turbo
+- f1-preview
+- f1-mini
+
+### Together Models
+- meta-llama/Llama-Vision-Free
+- meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo
+- meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo
+- meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo
+- meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
+- meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo
+- meta-llama/Meta-Llama-3-8B-Instruct-Turbo
+- meta-llama/Meta-Llama-3-70B-Instruct-Turbo
+- meta-llama/Llama-3.2-3B-Instruct-Turbo
+- meta-llama/Meta-Llama-3-8B-Instruct-Lite
+- meta-llama/Meta-Llama-3-70B-Instruct-Lite
+
+### Qwen Models
+- qwen-turbo-latest
+- qwen-turbo
+- qwen-plus
+- qwen-max
+- qwen1.5-110b-chat
+- qwen1.5-72b-chat
+- qwen1.5-32b-chat
+- qwen1.5-14b-chat
+- qwen1.5-7b-chat
+- qwq-32b-preview
+- qvq-72b-preview
+
+### Hyperbolic Models
+- meta-llama/llama-3.3-70b
+- Qwen/QwQ-32B-Preview
+- Qwen/qwen2.5-coder-32b
+- meta-llama/llama-3.2-3b
+- Qwen/qwen2.5-72b
+- deepseek/deepseek-v2.5
+- meta-llama/llama-3-70b
+- hermes/hermes-3-70b
+- meta-llama/llama-3.1-405b
+- meta-llama/llama-3.1-70b
+- meta-llama/llama-3.1-8b
+
 ## Requirements
 
 - Python 3.10 or higher
@@ -326,6 +377,11 @@ Additional dependencies are installed based on your chosen provider:
 - LumaAI: `lumaai>=0.0.3`
 - XAI: `xai>=0.1.0`
 - Cohere: `cohere>=5.0.0`
+
+### Fireworks: `openai>=1.58.1`
+### Together: `openai>=1.58.1`
+### Qwen: `openai>=1.58.1`
+### Hyperbolic: `openai>=1.58.1`
 
 ## Troubleshooting
 
@@ -354,7 +410,18 @@ os.environ["COHERE_API_KEY"] = "your-api-key"
 
 # For SambaNova
 os.environ["SAMBANOVA_API_KEY"] = "your-api-key"
-```
+
+# Environment variables additions:
+export FIREWORKS_API_KEY=<your token>
+export TOGETHER_API_KEY=<your token>
+export QWEN_API_KEY=<your token>
+export HYPERBOLIC_API_KEY=<your token>
+
+# Additional troubleshooting environment variables:
+os.environ["FIREWORKS_API_KEY"] = "your-api-key"
+os.environ["TOGETHER_API_KEY"] = "your-api-key"
+os.environ["QWEN_API_KEY"] = "your-api-key"
+os.environ["HYPERBOLIC_API_KEY"] = "your-api-key"
 
 ### No Providers Error
 If you see an error about no providers being installed, make sure you've installed the package with the desired provider:
