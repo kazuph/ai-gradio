@@ -133,6 +133,17 @@ try:
 except ImportError:
     pass
 
+try:
+    from .fireworks_gradio import registry as fireworks_registry
+    registry.update({f"fireworks:{k}": fireworks_registry for k in [
+        'whisper-v3',
+        'whisper-v3-turbo',
+        'f1-preview',
+        'f1-mini'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -146,6 +157,7 @@ if not registry:
         "pip install 'ai-gradio[sambanova]' for SambaNova support\n"
         "pip install 'ai-gradio[hyperbolic]' for Hyperbolic support\n"
         "pip install 'ai-gradio[qwen]' for Qwen support\n"
+        "pip install 'ai-gradio[fireworks]' for Fireworks support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 

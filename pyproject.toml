@@ -70,6 +70,7 @@ all = [
     "sambanova>=0.0.1",
     "hyperbolic>=1.58.1"
 ]
+fireworks = ["openai>=1.58.1"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
