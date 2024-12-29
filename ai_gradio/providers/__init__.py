@@ -100,17 +100,18 @@ except ImportError:
 try:
     from .hyperbolic_gradio import registry as hyperbolic_registry
     registry.update({f"hyperbolic:{k}": hyperbolic_registry for k in [
-        'meta-llama/llama-3.3-70b',
+        'Qwen/Qwen2.5-Coder-32B-Instruct',
+        'meta-llama/Llama-3.2-3B-Instruct',
+        'meta-llama/Meta-Llama-3.1-8B-Instruct',
+        'meta-llama/Meta-Llama-3.1-70B-Instruct',
+        'meta-llama/Meta-Llama-3-70B-Instruct',
+        'NousResearch/Hermes-3-Llama-3.1-70B',
+        'Qwen/Qwen2.5-72B-Instruct',
+        'deepseek-ai/DeepSeek-V2.5',
+        'meta-llama/Meta-Llama-3.1-405B-Instruct',
         'Qwen/QwQ-32B-Preview',
-        'Qwen/qwen2.5-coder-32b',
-        'meta-llama/llama-3.2-3b',
-        'Qwen/qwen2.5-72b',
-        'deepseek/deepseek-v2.5',
-        'meta-llama/llama-3-70b',
-        'hermes/hermes-3-70b',
-        'meta-llama/llama-3.1-405b',
-        'meta-llama/llama-3.1-70b',
-        'meta-llama/llama-3.1-8b'
+        'meta-llama/Llama-3.3-70B-Instruct',
+        'deepseek-ai/DeepSeek-V3'
     ]})
 except ImportError:
     pass

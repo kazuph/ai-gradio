@@ -3,16 +3,17 @@ from openai import OpenAI
 import gradio as gr
 from typing import Callable
 
-__version__ = "0.0.5"
-
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str, base_url: str = None):
     def fn(message, history):
         inputs = preprocess(message, history)
+        # Set base URL and adjust endpoint handling
+      
         client = OpenAI(
             api_key=api_key,
             base_url="https://api.hyperbolic.xyz/v1"
         )
+            
         completion = client.chat.completions.create(
             model=model_name,
             messages=[
@@ -20,7 +21,8 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
             ],
             stream=True,
             temperature=0.7,
-            max_tokens=1024,
+            max_tokens=512,
+            top_p=0.9,
         )
         response_text = ""
         for chunk in completion:
