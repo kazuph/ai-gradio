@@ -99,12 +99,12 @@ Then in a Python file:
 
 ```python
 import gradio as gr
-from ai_gradio import registry
+import ai_gradio
 
 # Create a Gradio interface
 gr.load(
     name='openai:gpt-4-turbo',  # or 'gemini:gemini-1.5-flash' for Gemini, or 'xai:grok-beta' for Grok
-    src=registry,
+    src=ai_gradio.registry,
     title='AI Chat',
     description='Chat with an AI model'
 ).launch()
@@ -122,13 +122,13 @@ Voice chat is supported for OpenAI realtime models. You can enable it in two way
 # Using a realtime model
 gr.load(
     name='gpt-4o-realtime-preview-2024-10-01',
-    src=registry
+    src=ai_gradio.registry
 ).launch()
 
 # Or explicitly enabling voice chat with any realtime model
 gr.load(
     name='gpt-4o-mini-realtime-preview-2024-12-17',
-    src=registry,
+    src=ai_gradio.registry,
     enable_voice=True
 ).launch()
 ```
@@ -160,7 +160,7 @@ Video chat is supported for Gemini models. You can enable it by setting `enable_
 ```python
 gr.load(
     name='gemini:gemini-1.5-flash',
-    src=registry,
+    src=ai_gradio.registry,
     enable_video=True
 ).launch()
 ```
@@ -171,7 +171,7 @@ DeepSeek models support text generation and coding assistance:
 ```python
 gr.load(
     name='deepseek:deepseek-chat',
-    src=registry,
+    src=ai_gradio.registry,
     title='DeepSeek Chat',
     description='Chat with DeepSeek'
 ).launch()
@@ -179,7 +179,7 @@ gr.load(
 # For code assistance
 gr.load(
     name='deepseek:deepseek-coder',
-    src=registry,
+    src=ai_gradio.registry,
     title='DeepSeek Coder',
     description='Get coding help from DeepSeek'
 ).launch()
@@ -187,7 +187,7 @@ gr.load(
 # For vision tasks
 gr.load(
     name='deepseek:deepseek-vision',
-    src=registry,
+    src=ai_gradio.registry,
     title='DeepSeek Vision',
     description='Visual understanding with DeepSeek'
 ).launch()
@@ -199,7 +199,7 @@ Anthropic's Claude models are supported for text generation:
 ```python
 gr.load(
     name='anthropic:claude-3-opus-20240229',
-    src=registry,
+    src=ai_gradio.registry,
     title='Claude Chat',
     description='Chat with Claude'
 ).launch()
@@ -212,14 +212,14 @@ LumaAI support allows you to generate videos and images from text prompts:
 # For video generation
 gr.load(
     name='lumaai:dream-machine',
-    src=registry,
+    src=ai_gradio.registry,
     title='LumaAI Video Generation'
 ).launch()
 
 # For image generation
 gr.load(
     name='lumaai:photon-1',
-    src=registry,
+    src=ai_gradio.registry,
     title='LumaAI Image Generation'
 ).launch()
 ```
@@ -231,7 +231,7 @@ Hyperbolic models support various LLMs including DeepSeek, LLaMA, and Qwen:
 # Using DeepSeek V3
 gr.load(
     name='hyperbolic:deepseek-ai/DeepSeek-V3',
-    src=registry,
+    src=ai_gradio.registry,
     title='DeepSeek Chat',
     description='Chat with DeepSeek V3'
 ).launch()
@@ -239,7 +239,7 @@ gr.load(
 # Using LLaMA 3.3
 gr.load(
     name='hyperbolic:meta-llama/llama-3.3-70b',
-    src=registry,
+    src=ai_gradio.registry,
     title='LLaMA Chat',
     description='Chat with LLaMA 3.3'
 ).launch()
@@ -247,7 +247,7 @@ gr.load(
 # Using Qwen Coder
 gr.load(
     name='hyperbolic:Qwen/qwen2.5-coder-32b',
-    src=registry,
+    src=ai_gradio.registry,
     title='Qwen Coder',
     description='Get coding help from Qwen'
 ).launch()
@@ -259,7 +259,7 @@ CrewAI support allows you to create teams of AI agents that work together to sol
 ```python
 gr.load(
     name='crewai:gpt-4-turbo',
-    src=registry,
+    src=ai_gradio.registry,
     title='AI Team Chat',
     description='Chat with a team of specialized AI agents'
 ).launch()
@@ -282,7 +282,7 @@ You can specify the crew type when creating the interface:
 ```python
 gr.load(
     name='crewai:gpt-4-turbo',
-    src=registry,
+    src=ai_gradio.registry,
     crew_type='article',  # or 'support'
     title='AI Writing Team',
     description='Create articles with a team of AI agents'
@@ -298,7 +298,7 @@ When loading a model, you can specify the provider explicitly using the format `
 # Explicit provider
 gr.load(
     name='gemini:gemini-pro',
-    src=registry
+    src=ai_gradio.registry
 ).launch()
 ```
 
@@ -309,7 +309,7 @@ You can customize the interface by adding examples, changing the title, or addin
 ```python
 gr.load(
     name='gpt-4-turbo',
-    src=registry,
+    src=ai_gradio.registry,
     title='Custom AI Chat',
     description='Chat with an AI assistant',
     examples=[
@@ -325,21 +325,21 @@ You can combine multiple models in a single interface using Gradio's Blocks:
 
 ```python
 import gradio as gr
-from ai_gradio import registry
+import ai_gradio
 
 with gr.Blocks() as demo:
     with gr.Tab("GPT-4"):
-        gr.load('gpt-4-turbo', src=registry)
+        gr.load('gpt-4-turbo', src=ai_gradio.registry)
     with gr.Tab("Gemini"):
-        gr.load('gemini-pro', src=registry)
+        gr.load('gemini-pro', src=ai_gradio.registry)
     with gr.Tab("Claude"):
-        gr.load('anthropic:claude-3-opus-20240229', src=registry)
+        gr.load('anthropic:claude-3-opus-20240229', src=ai_gradio.registry)
     with gr.Tab("LumaAI"):
-        gr.load('lumaai:dream-machine', src=registry)
+        gr.load('lumaai:dream-machine', src=ai_gradio.registry)
     with gr.Tab("CrewAI"):
-        gr.load('crewai:gpt-4-turbo', src=registry)
+        gr.load('crewai:gpt-4-turbo', src=ai_gradio.registry)
     with gr.Tab("Grok"):
-        gr.load('xai:grok-beta', src=registry)
+        gr.load('xai:grok-beta', src=ai_gradio.registry)
 
 demo.launch()
 ```
