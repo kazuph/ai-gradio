@@ -697,4 +697,15 @@ examples = [
 ]
 ```
 
+### Video Chat (Gemini only)
+Video chat is supported for Gemini models. You can enable it by setting `enable_video=True`:
+
+```python
+gr.load(
+    name='gemini:gemini-1.5-flash',
+    src=ai_gradio.registry,
+    enable_video=True
+).launch()
+```
+
 
