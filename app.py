@@ -2,6 +2,7 @@ import gradio as gr
 import ai_gradio
 
 gr.load(
-    name='gemini:gemini-2.0-flash-exp',
+    name='hyperbolic:deepseek-ai/DeepSeek-V3',
     src=ai_gradio.registry,
+    coder=True
 ).launch()
