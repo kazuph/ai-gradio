@@ -665,4 +665,36 @@ gr.load(
 ).launch()
 ```
 
+### Gemini Code Generator Interface
+```python
+import gradio as gr
+import ai_gradio
+
+# Create a code generation interface with Gemini
+gr.load(
+    name='gemini:gemini-pro',
+    src=ai_gradio.registry,
+    coder=True,  # Enable code generation interface
+    title='Gemini Code Generator',
+    description='Generate web applications with Gemini'
+).launch()
+```
+
+This creates an interactive code generation interface with:
+- Input area for describing the desired web application
+- Live preview of generated code
+- Example templates
+- System prompt configuration
+- Code history tracking
+- Real-time code preview
+
+Example prompts:
+```python
+examples = [
+    "Create a button that changes color when clicked",
+    "Create a simple todo list with add/remove functionality",
+    "Create a countdown timer with start/pause/reset controls"
+]
+```
+
 

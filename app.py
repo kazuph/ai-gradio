@@ -2,6 +2,6 @@ import gradio as gr
 import ai_gradio
 
 gr.load(
-    name='gemini:gemini-1.5-flash',
+    name='gemini:gemini-2.0-flash-exp',
     src=ai_gradio.registry,
 ).launch()
