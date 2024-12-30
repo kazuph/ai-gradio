@@ -103,7 +103,7 @@ from ai_gradio import registry
 
 # Create a Gradio interface
 gr.load(
-    name='openai:gpt-4-turbo',  # or 'gemini-pro' for Gemini, or 'xai:grok-beta' for Grok
+    name='openai:gpt-4-turbo',  # or 'gemini:gemini-pro' for Gemini, or 'xai:grok-beta' for Grok
     src=registry,
     title='AI Chat',
     description='Chat with an AI model'
@@ -547,5 +547,122 @@ For voice chat functionality:
 For video chat functionality:
 - opencv-python
 - Pillow
+
+## Examples
+
+### Basic Chat Interface
+```python
+import gradio as gr
+import ai_gradio
+
+# Simple chat with GPT-4
+gr.load(
+    name='openai:gpt-4-turbo',
+    src=ai_gradio.registry,
+    title='GPT-4 Chat',
+    description='Chat with GPT-4'
+).launch()
+```
+
+### Multi-Model Interface
+```python
+import gradio as gr
+import ai_gradio
+
+with gr.Blocks() as demo:
+    gr.Markdown("# AI Model Hub")
+    
+    with gr.Tab("Text Models"):
+        with gr.Tab("GPT-4"):
+            gr.load('openai:gpt-4-turbo', src=ai_gradio.registry)
+        with gr.Tab("Claude"):
+            gr.load('anthropic:claude-3-opus-20240229', src=ai_gradio.registry)
+        with gr.Tab("DeepSeek"):
+            gr.load('deepseek:deepseek-chat', src=ai_gradio.registry)
+            
+    with gr.Tab("Vision Models"):
+        with gr.Tab("Gemini Vision"):
+            gr.load('gemini:gemini-pro-vision', src=ai_gradio.registry, enable_video=True)
+        with gr.Tab("LumaAI"):
+            gr.load('lumaai:dream-machine', src=ai_gradio.registry)
+            
+    with gr.Tab("Specialized"):
+        with gr.Tab("Code Assistant"):
+            gr.load('deepseek:deepseek-coder', src=ai_gradio.registry)
+        with gr.Tab("AI Team"):
+            gr.load('crewai:gpt-4-turbo', src=ai_gradio.registry, crew_type='article')
+
+demo.launch()
+```
+
+### Voice-Enabled Chat
+```python
+import gradio as gr
+import ai_gradio
+
+# Enable voice chat with GPT-4
+gr.load(
+    name='openai:gpt-4-turbo',
+    src=ai_gradio.registry,
+    enable_voice=True,
+    title='Voice Chat',
+    description='Talk with GPT-4'
+).launch()
+```
+
+### Custom Examples and Styling
+```python
+import gradio as gr
+import ai_gradio
+
+# Chat interface with custom examples and CSS
+gr.load(
+    name='gemini:gemini-pro',
+    src=ai_gradio.registry,
+    title='Gemini Pro Assistant',
+    description='Your AI research companion',
+    examples=[
+        "Explain quantum entanglement",
+        "What are the main differences between RNA and DNA?",
+        "How does a neural network learn?"
+    ],
+    css=".gradio-container {background-color: #f0f8ff}"
+).launch()
+```
+
+### AI Team for Content Creation
+```python
+import gradio as gr
+import ai_gradio
+
+# CrewAI setup for article writing
+gr.load(
+    name='crewai:gpt-4-turbo',
+    src=ai_gradio.registry,
+    crew_type='article',
+    title='AI Writing Team',
+    description='Collaborate with AI agents to create articles',
+    examples=[
+        "Write a blog post about sustainable energy",
+        "Create a technical tutorial about Docker containers"
+    ]
+).launch()
+```
+
+### Support Team with Documentation
+```python
+import gradio as gr
+import ai_gradio
+
+# CrewAI support team with documentation reference
+gr.load(
+    name='crewai:gpt-4-turbo',
+    src=ai_gradio.registry,
+    crew_type='support',
+    title='AI Support Team',
+    description='Get help from AI support agents',
+    documentation_url='https://docs.example.com'
+).launch()
+```
 
 
