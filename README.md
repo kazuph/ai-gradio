@@ -1,6 +1,6 @@
 # `ai-gradio`
 
-A Python package that makes it easy for developers to create machine learning apps powered by OpenAI, Google's Gemini models, Anthropic's Claude, LumaAI, CrewAI, and XAI's Grok.
+A Python package that makes it easy for developers to create machine learning apps powered by OpenAI, Google's Gemini models, Anthropic's Claude, LumaAI, CrewAI, XAI's Grok, and Hyperbolic and more.
 
 ## Installation
 
@@ -31,6 +31,9 @@ pip install 'ai-gradio[cohere]'
 # Install with SambaNova support
 pip install 'ai-gradio[sambanova]'
 
+# Install with Hyperbolic support
+pip install 'ai-gradio[hyperbolic]'
+
 # Install with all providers
 pip install 'ai-gradio[all]'
 
@@ -38,7 +41,6 @@ pip install 'ai-gradio[all]'
 pip install 'ai-gradio[fireworks]'
 pip install 'ai-gradio[together]'
 pip install 'ai-gradio[qwen]'
-pip install 'ai-gradio[hyperbolic]'
 
 # Install with DeepSeek support
 pip install 'ai-gradio[deepseek]'
@@ -81,6 +83,11 @@ export COHERE_API_KEY=<your token>
 For SambaNova:
 ```bash
 export SAMBANOVA_API_KEY=<your token>
+```
+
+For Hyperbolic:
+```bash
+export HYPERBOLIC_API_KEY=<your token>
 ```
 
 For DeepSeek:
@@ -405,6 +412,35 @@ demo.launch()
 - deepseek-coder
 - deepseek-vision
 
+### Text Generation with Hyperbolic
+Hyperbolic models support various LLMs including DeepSeek, LLaMA, and Qwen:
+
+```python
+# Using DeepSeek V3
+interface = gr.load(
+    name='hyperbolic:deepseek-ai/DeepSeek-V3',
+    src=registry,
+    title='DeepSeek Chat',
+    description='Chat with DeepSeek V3'
+).launch()
+
+# Using LLaMA 3.3
+interface = gr.load(
+    name='hyperbolic:meta-llama/llama-3.3-70b',
+    src=registry,
+    title='LLaMA Chat',
+    description='Chat with LLaMA 3.3'
+).launch()
+
+# Using Qwen Coder
+interface = gr.load(
+    name='hyperbolic:Qwen/qwen2.5-coder-32b',
+    src=registry,
+    title='Qwen Coder',
+    description='Get coding help from Qwen'
+).launch()
+```
+
 ## Requirements
 
 - Python 3.10 or higher
@@ -419,6 +455,7 @@ Additional dependencies are installed based on your chosen provider:
 - XAI: `xai>=0.1.0`
 - Cohere: `cohere>=5.0.0`
 - DeepSeek: `openai>=1.58.1`
+- Hyperbolic: `openai>=1.58.1`
 
 ### Fireworks: `openai>=1.58.1`
 ### Together: `openai>=1.58.1`
