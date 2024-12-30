@@ -103,7 +103,7 @@ from ai_gradio import registry
 
 # Create a Gradio interface
 gr.load(
-    name='openai:gpt-4-turbo',  # or 'gemini:gemini-pro' for Gemini, or 'xai:grok-beta' for Grok
+    name='openai:gpt-4-turbo',  # or 'gemini:gemini-1.5-flash' for Gemini, or 'xai:grok-beta' for Grok
     src=registry,
     title='AI Chat',
     description='Chat with an AI model'
@@ -159,7 +159,7 @@ Video chat is supported for Gemini models. You can enable it by setting `enable_
 
 ```python
 gr.load(
-    name='gemini-pro',
+    name='gemini:gemini-1.5-flash',
     src=registry,
     enable_video=True
 ).launch()
