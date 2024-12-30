@@ -43,6 +43,11 @@ try:
         "gpt-4",
         "gpt-4-0613",
         "o1-2024-12-17",
+        "gpt-4o-realtime-preview-2024-10-01",
+        "gpt-4o-realtime-preview",
+        "gpt-4o-realtime-preview-2024-12-17",
+        "gpt-4o-mini-realtime-preview",
+        "gpt-4o-mini-realtime-preview-2024-12-17",
     ]})
 except ImportError:
     pass

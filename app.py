@@ -2,6 +2,6 @@ import gradio as gr
 import ai_gradio
 
 gr.load(
-    name='hyperbolic:deepseek-ai/DeepSeek-V3',
-    src=ai_gradio.registry,
+    name='openai:gpt-4-turbo-preview',
+    src=ai_gradio.registry
 ).launch()

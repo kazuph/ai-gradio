@@ -185,9 +185,13 @@ def registry(name: str, token: str | None = None, twilio_sid: str | None = None,
         raise ValueError("OPENAI_API_KEY environment variable is not set.")
 
     model = name if name else "gpt-4"
+    
+    # Check if model is a realtime model or if enable_voice is True
+    is_realtime_model = "realtime" in model.lower()
+    use_voice_ui = enable_voice or is_realtime_model
 
-    if enable_voice:
-        # Existing WebRTC implementation
+    if use_voice_ui:
+        # Voice UI implementation
         with gr.Blocks() as interface:
             # Set initial visibility based on whether API key is provided
             show_api_input = api_key is None
