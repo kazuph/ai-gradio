@@ -121,13 +121,13 @@ Voice chat is supported for OpenAI realtime models. You can enable it in two way
 ```python
 # Using a realtime model
 gr.load(
-    name='gpt-4o-realtime-preview-2024-10-01',
+    name='openai:gpt-4o-realtime-preview-2024-10-01',
     src=ai_gradio.registry
 ).launch()
 
 # Or explicitly enabling voice chat with any realtime model
 gr.load(
-    name='gpt-4o-mini-realtime-preview-2024-12-17',
+    name='openai:gpt-4o-mini-realtime-preview-2024-12-17',
     src=ai_gradio.registry,
     enable_voice=True
 ).launch()
