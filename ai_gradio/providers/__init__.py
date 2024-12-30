@@ -23,13 +23,42 @@ registry = {}
 
 try:
     from .openai_gradio import registry as openai_registry
-    registry.update({f"openai:{k}": openai_registry for k in ['gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo', 'gpt-4o-mini-realtime-preview-2024-12-17']})
+    registry.update({f"openai:{k}": openai_registry for k in [
+        "gpt-4o-2024-11-20",
+        "gpt-4o",
+        "gpt-4o-2024-08-06",
+        "gpt-4o-2024-05-13",
+        "chatgpt-4o-latest",
+        "gpt-4o-mini",
+        "gpt-4o-mini-2024-07-18",
+        "o1-preview",
+        "o1-preview-2024-09-12",
+        "o1-mini",
+        "o1-mini-2024-09-12",
+        "gpt-4-turbo",
+        "gpt-4-turbo-2024-04-09",
+        "gpt-4-turbo-preview",
+        "gpt-4-0125-preview",
+        "gpt-4-1106-preview",
+        "gpt-4",
+        "gpt-4-0613",
+        "o1-2024-12-17",
+    ]})
 except ImportError:
     pass
 
 try:
     from .gemini_gradio import registry as gemini_registry
-    registry.update({f"gemini:{k}": gemini_registry for k in ['gemini-pro', 'gemini-pro-vision', 'gemini-2.0-flash-exp']})
+    registry.update({f"gemini:{k}": gemini_registry for k in [
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-8b',
+        'gemini-1.5-pro',
+        'gemini-exp-1114',
+        'gemini-exp-1121',
+        'gemini-exp-1206',
+        'gemini-2.0-flash-exp',
+        'gemini-2.0-flash-thinking-exp-1219'
+    ]})
 except ImportError:
     pass
 
@@ -43,12 +72,11 @@ except ImportError:
 try:
     from .anthropic_gradio import registry as anthropic_registry
     registry.update({f"anthropic:{k}": anthropic_registry for k in [
+        'claude-3-5-sonnet-20241022',
+        'claude-3-5-haiku-20241022',
         'claude-3-opus-20240229',
         'claude-3-sonnet-20240229',
         'claude-3-haiku-20240307',
-        'claude-2.1',
-        'claude-2.0',
-        'claude-instant-1.2',
     ]})
 except ImportError:
     pass

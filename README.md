@@ -103,7 +103,7 @@ from ai_gradio import registry
 
 # Create a Gradio interface
 gr.load(
-    name='gpt-4-turbo',  # or 'gemini-pro' for Gemini, or 'xai:grok-beta' for Grok
+    name='openai:gpt-4-turbo',  # or 'gemini-pro' for Gemini, or 'xai:grok-beta' for Grok
     src=registry,
     title='AI Chat',
     description='Chat with an AI model'
