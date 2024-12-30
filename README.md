@@ -102,7 +102,7 @@ import gradio as gr
 from ai_gradio import registry
 
 # Create a Gradio interface
-interface = gr.load(
+gr.load(
     name='gpt-4-turbo',  # or 'gemini-pro' for Gemini, or 'xai:grok-beta' for Grok
     src=registry,
     title='AI Chat',
@@ -120,13 +120,13 @@ Voice chat is supported for OpenAI realtime models. You can enable it in two way
 
 ```python
 # Using a realtime model
-interface = gr.load(
+gr.load(
     name='gpt-4o-realtime-preview-2024-10-01',
     src=registry
 ).launch()
 
 # Or explicitly enabling voice chat with any realtime model
-interface = gr.load(
+gr.load(
     name='gpt-4o-mini-realtime-preview-2024-12-17',
     src=registry,
     enable_voice=True
@@ -158,7 +158,7 @@ Without Twilio credentials, voice chat will still work but might have connectivi
 Video chat is supported for Gemini models. You can enable it by setting `enable_video=True`:
 
 ```python
-interface = gr.load(
+gr.load(
     name='gemini-pro',
     src=registry,
     enable_video=True
@@ -169,7 +169,7 @@ interface = gr.load(
 DeepSeek models support text generation and coding assistance:
 
 ```python
-interface = gr.load(
+gr.load(
     name='deepseek:deepseek-chat',
     src=registry,
     title='DeepSeek Chat',
@@ -177,7 +177,7 @@ interface = gr.load(
 ).launch()
 
 # For code assistance
-interface = gr.load(
+gr.load(
     name='deepseek:deepseek-coder',
     src=registry,
     title='DeepSeek Coder',
@@ -185,7 +185,7 @@ interface = gr.load(
 ).launch()
 
 # For vision tasks
-interface = gr.load(
+gr.load(
     name='deepseek:deepseek-vision',
     src=registry,
     title='DeepSeek Vision',
@@ -197,7 +197,7 @@ interface = gr.load(
 Anthropic's Claude models are supported for text generation:
 
 ```python
-interface = gr.load(
+gr.load(
     name='anthropic:claude-3-opus-20240229',
     src=registry,
     title='Claude Chat',
@@ -210,17 +210,46 @@ LumaAI support allows you to generate videos and images from text prompts:
 
 ```python
 # For video generation
-interface = gr.load(
+gr.load(
     name='lumaai:dream-machine',
     src=registry,
     title='LumaAI Video Generation'
 ).launch()
 
 # For image generation
-interface = gr.load(
+gr.load(
     name='lumaai:photon-1',
     src=registry,
     title='LumaAI Image Generation'
+).launch()
+```
+
+### Text Generation with Hyperbolic
+Hyperbolic models support various LLMs including DeepSeek, LLaMA, and Qwen:
+
+```python
+# Using DeepSeek V3
+gr.load(
+    name='hyperbolic:deepseek-ai/DeepSeek-V3',
+    src=registry,
+    title='DeepSeek Chat',
+    description='Chat with DeepSeek V3'
+).launch()
+
+# Using LLaMA 3.3
+gr.load(
+    name='hyperbolic:meta-llama/llama-3.3-70b',
+    src=registry,
+    title='LLaMA Chat',
+    description='Chat with LLaMA 3.3'
+).launch()
+
+# Using Qwen Coder
+gr.load(
+    name='hyperbolic:Qwen/qwen2.5-coder-32b',
+    src=registry,
+    title='Qwen Coder',
+    description='Get coding help from Qwen'
 ).launch()
 ```
 
@@ -228,7 +257,7 @@ interface = gr.load(
 CrewAI support allows you to create teams of AI agents that work together to solve complex tasks. Enable it by using the CrewAI provider:
 
 ```python
-interface = gr.load(
+gr.load(
     name='crewai:gpt-4-turbo',
     src=registry,
     title='AI Team Chat',
@@ -251,7 +280,7 @@ The CrewAI integration supports different specialized agent teams:
 You can specify the crew type when creating the interface:
 
 ```python
-interface = gr.load(
+gr.load(
     name='crewai:gpt-4-turbo',
     src=registry,
     crew_type='article',  # or 'support'
@@ -267,7 +296,7 @@ When using the `support` crew type, you can provide a documentation URL that the
 When loading a model, you can specify the provider explicitly using the format `provider:model_name`. 
 ```python
 # Explicit provider
-interface = gr.load(
+gr.load(
     name='gemini:gemini-pro',
     src=registry
 ).launch()
@@ -278,7 +307,7 @@ interface = gr.load(
 You can customize the interface by adding examples, changing the title, or adding a description:
 
 ```python
-interface = gr.load(
+gr.load(
     name='gpt-4-turbo',
     src=registry,
     title='Custom AI Chat',
@@ -411,35 +440,6 @@ demo.launch()
 - deepseek-chat
 - deepseek-coder
 - deepseek-vision
-
-### Text Generation with Hyperbolic
-Hyperbolic models support various LLMs including DeepSeek, LLaMA, and Qwen:
-
-```python
-# Using DeepSeek V3
-interface = gr.load(
-    name='hyperbolic:deepseek-ai/DeepSeek-V3',
-    src=registry,
-    title='DeepSeek Chat',
-    description='Chat with DeepSeek V3'
-).launch()
-
-# Using LLaMA 3.3
-interface = gr.load(
-    name='hyperbolic:meta-llama/llama-3.3-70b',
-    src=registry,
-    title='LLaMA Chat',
-    description='Chat with LLaMA 3.3'
-).launch()
-
-# Using Qwen Coder
-interface = gr.load(
-    name='hyperbolic:Qwen/qwen2.5-coder-32b',
-    src=registry,
-    title='Qwen Coder',
-    description='Get coding help from Qwen'
-).launch()
-```
 
 ## Requirements
 
