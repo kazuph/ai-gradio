@@ -154,6 +154,38 @@ You can get Twilio credentials by:
 
 Without Twilio credentials, voice chat will still work but might have connectivity issues in some network environments.
 
+### Gemini Code Generator Interface
+```python
+import gradio as gr
+import ai_gradio
+
+# Create a code generation interface with Gemini
+gr.load(
+    name='gemini:gemini-pro',
+    src=ai_gradio.registry,
+    coder=True,  # Enable code generation interface
+    title='Gemini Code Generator',
+    description='Generate web applications with Gemini'
+).launch()
+```
+
+This creates an interactive code generation interface with:
+- Input area for describing the desired web application
+- Live preview of generated code
+- Example templates
+- System prompt configuration
+- Code history tracking
+- Real-time code preview
+
+Example prompts:
+```python
+examples = [
+    "Create a button that changes color when clicked",
+    "Create a simple todo list with add/remove functionality",
+    "Create a countdown timer with start/pause/reset controls"
+]
+```
+
 ### Video Chat (Gemini only)
 Video chat is supported for Gemini models. You can enable it by setting `enable_video=True`:
 
@@ -665,47 +697,8 @@ gr.load(
 ).launch()
 ```
 
-### Gemini Code Generator Interface
-```python
-import gradio as gr
-import ai_gradio
 
-# Create a code generation interface with Gemini
-gr.load(
-    name='gemini:gemini-pro',
-    src=ai_gradio.registry,
-    coder=True,  # Enable code generation interface
-    title='Gemini Code Generator',
-    description='Generate web applications with Gemini'
-).launch()
-```
 
-This creates an interactive code generation interface with:
-- Input area for describing the desired web application
-- Live preview of generated code
-- Example templates
-- System prompt configuration
-- Code history tracking
-- Real-time code preview
 
-Example prompts:
-```python
-examples = [
-    "Create a button that changes color when clicked",
-    "Create a simple todo list with add/remove functionality",
-    "Create a countdown timer with start/pause/reset controls"
-]
-```
-
-### Video Chat (Gemini only)
-Video chat is supported for Gemini models. You can enable it by setting `enable_video=True`:
-
-```python
-gr.load(
-    name='gemini:gemini-1.5-flash',
-    src=ai_gradio.registry,
-    enable_video=True
-).launch()
-```
 
 
