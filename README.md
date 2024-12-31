@@ -44,6 +44,9 @@ pip install 'ai-gradio[qwen]'
 
 # Install with DeepSeek support
 pip install 'ai-gradio[deepseek]'
+
+# Install with SmolagentsAI support
+pip install 'ai-gradio[smolagents]'
 ```
 
 ## Basic Usage
@@ -284,6 +287,31 @@ gr.load(
     description='Get coding help from Qwen'
 ).launch()
 ```
+
+### smolagents
+
+smolagents support provides an intelligent assistant with web search capabilities:
+
+```python
+gr.load(
+    name='smolagents:meta-llama/Llama-3.1-8B-Instruct',
+    src=ai_gradio.registry,
+    title='smolagents Assistant',
+    description='Agent Assistant'
+).launch()
+```
+
+The SmolagentsAI integration includes:
+- Interactive code generation
+- Web search integration via DuckDuckGo
+- Step-by-step thought process visibility
+- Error handling and debugging assistance
+- Real-time streaming responses
+
+### SmolagentsAI Models
+- meta-llama/Llama-3.1-8B-Instruct
+- meta-llama/Llama-3.1-70B-Instruct
+- meta-llama/Llama-3.2-70B-Instruct
 
 ### AI Agent Teams with CrewAI
 CrewAI support allows you to create teams of AI agents that work together to solve complex tasks. Enable it by using the CrewAI provider:
