@@ -243,6 +243,18 @@ try:
 except ImportError:
     pass
 
+try:
+    from .smolagents_gradio import registry as smolagents_registry
+    registry.update({f"smolagents:{k}": smolagents_registry for k in [
+        'Qwen/Qwen2.5-72B-Instruct',
+        'Qwen/Qwen2.5-4B-Instruct',
+        'Qwen/Qwen2.5-1.8B-Instruct',
+        'meta-llama/Llama-3.3-70B-Instruct',
+        'meta-llama/Llama-3.1-8B-Instruct'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -258,6 +270,7 @@ if not registry:
         "pip install 'ai-gradio[qwen]' for Qwen support\n"
         "pip install 'ai-gradio[fireworks]' for Fireworks support\n"
         "pip install 'ai-gradio[deepseek]' for DeepSeek support\n"
+        "pip install 'ai-gradio[smolagents]' for SmolaAgents support\n"
         "pip install 'ai-gradio[all]' for all providers"
     )
 
