@@ -29,7 +29,12 @@ dependencies = [
     "gradio_webrtc[vad]",
     "numba==0.60.0",
     "python-dotenv",
-    "modelscope-studio"
+    "modelscope-studio",
+    "transformers>=4.37.0",
+    "torch>=2.0.0",
+    "accelerate>=0.27.0",
+    "bitsandbytes>=0.41.0",
+    "flash-attn>=2.3.0",
 ]
 
 [project.urls]

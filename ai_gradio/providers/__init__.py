@@ -255,6 +255,30 @@ try:
 except ImportError:
     pass
 
+try:
+    from .transformers_gradio import registry as transformers_registry
+    # Instead of a fixed list, we'll use a function that accepts any model name
+    def transformers_wrapper(name=None, **kwargs):
+        # This allows passing either a shorthand name or full model path
+        return transformers_registry(name=name, **kwargs)
+    
+    # Add some common models as examples in the registry
+    common_models = [
+        'tulu-3',
+        'olmo-2-13b',
+        'smolvlm',
+        'paligemma'
+    ]
+    
+    # Add the common models to the registry
+    registry.update({f"transformers:{k}": transformers_registry for k in common_models})
+    
+    # Add a catch-all handler for any other model
+    registry["transformers"] = transformers_wrapper
+
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
