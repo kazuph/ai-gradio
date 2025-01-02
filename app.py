@@ -2,7 +2,7 @@ import gradio as gr
 import ai_gradio
 
 gr.load(
-    name='smolagents:meta-llama/Llama-3.1-8B-Instruct',
+    name='crewai:gpt-4-turbo',
     src=ai_gradio.registry
 ).launch()
 
