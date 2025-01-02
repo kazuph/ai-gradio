@@ -260,7 +260,7 @@ class CrewManager:
             }]
 
 def registry(name: str, token: str | None = None, crew_type: str = "support", **kwargs):
-    default_api_key = os.environ.get("OPENAI_API_KEY")
+    has_api_key = bool(token or os.environ.get("OPENAI_API_KEY"))
     crew_manager = None
 
     with gr.Blocks(theme=gr.themes.Soft()) as demo:
@@ -272,14 +272,14 @@ def registry(name: str, token: str | None = None, crew_type: str = "support", **
             type="password",
             placeholder="Type your OpenAI API key and press Enter...",
             interactive=True,
-            visible=not (token or default_api_key)
+            visible=not has_api_key
         )
 
         chatbot = gr.Chatbot(
             label="Writing Process" if crew_type == "article" else "Process",
             height=700 if crew_type == "article" else 600,
             show_label=True,
-            visible=token or default_api_key,
+            visible=has_api_key,
             avatar_images=(None, "https://avatars.githubusercontent.com/u/170677839?v=4"),
             render_markdown=True,
             type="messages"
@@ -290,24 +290,24 @@ def registry(name: str, token: str | None = None, crew_type: str = "support", **
                 label="Article Topic" if crew_type == "article" else "Topic/Question",
                 placeholder="Enter topic..." if crew_type == "article" else "Enter your question...",
                 scale=4,
-                visible=token or default_api_key
+                visible=has_api_key
             )
             website_url = gr.Textbox(
                 label="Documentation URL",
                 placeholder="Enter documentation URL to search...",
                 scale=4,
-                visible=(token or default_api_key) and crew_type == "support"
+                visible=(has_api_key) and crew_type == "support"
             )
             btn = gr.Button(
                 "Write Article" if crew_type == "article" else "Start", 
                 variant="primary", 
                 scale=1, 
-                visible=token or default_api_key
+                visible=has_api_key
             )
 
         async def process_input(topic, website_url, history, api_key):
             nonlocal crew_manager
-            effective_api_key = token or api_key or default_api_key
+            effective_api_key = token or api_key or os.environ.get("OPENAI_API_KEY")
             
             if not effective_api_key:
                 yield [
@@ -354,7 +354,7 @@ def registry(name: str, token: str | None = None, crew_type: str = "support", **
                 btn: gr.Button(visible=True)
             }
 
-        if not (token or default_api_key):
+        if not has_api_key:
             api_key.submit(show_interface, None, [api_key, chatbot, topic, website_url, btn])
         
         btn.click(process_input, [topic, website_url, chatbot, api_key], [chatbot])
