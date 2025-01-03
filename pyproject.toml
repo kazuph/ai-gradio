@@ -17,6 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "torch>=2.0.0",
     "gradio>=5.9.1",
     "gradio-webrtc",
     "numpy",
@@ -31,7 +32,6 @@ dependencies = [
     "python-dotenv",
     "modelscope-studio",
     "transformers>=4.37.0",
-    "torch>=2.0.0",
     "accelerate>=0.27.0",
     "bitsandbytes>=0.41.0",
     "flash-attn>=2.3.0",
