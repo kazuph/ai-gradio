@@ -21,7 +21,6 @@ dependencies = [
     "numpy",
     "accelerate>=0.27.0",
     "bitsandbytes>=0.41.0",
-    "flash-attn>=2.3.0",
     "gradio>=5.9.1",
     "gradio-webrtc",
     "websockets",
@@ -48,6 +47,7 @@ dev = [
     "isort",
     "flake8"
 ]
+transformers = ["flash-attn>=2.3.0"]
 openai = ["openai>=1.58.1"]
 gemini = ["google-generativeai"]
 crewai = [
