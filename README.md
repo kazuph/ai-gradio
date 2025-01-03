@@ -47,6 +47,9 @@ pip install 'ai-gradio[deepseek]'
 
 # Install with SmolagentsAI support
 pip install 'ai-gradio[smolagents]'
+
+# Install with Groq support
+pip install 'ai-gradio[groq]'
 ```
 
 ## Basic Usage
@@ -723,6 +726,11 @@ gr.load(
     description='Get help from AI support agents',
     documentation_url='https://docs.example.com'
 ).launch()
+```
+
+For Groq:
+```bash
+export GROQ_API_KEY=<your token>
 ```
 
 

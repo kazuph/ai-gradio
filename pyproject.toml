@@ -73,7 +73,8 @@ all = [
     "lumaai>=0.0.3",
     "cohere>=5.0.0",
     "sambanova>=0.0.1",
-    "hyperbolic>=1.58.1"
+    "hyperbolic>=1.58.1",
+    "groq>=0.3.0"
 ]
 fireworks = ["openai>=1.58.1"]
 together = ["openai>=1.58.1"]
