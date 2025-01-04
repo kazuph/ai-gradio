@@ -74,7 +74,7 @@ def registry(name: str, token: str | None = None, **kwargs):
         fn=fn,
         title="Browser Use Agent",
         description="Chat with an AI agent that can perform browser tasks.",
-        examples=["Search for the latest news about AI", 
+        examples=["Find a one-way flight from Bali to Tokyo on 12 January 2025 on Google Flights. Return me the cheapest option.", 
                  "Find the current weather in New York"],
         **kwargs
     )
