@@ -12,6 +12,7 @@ A Python package that makes it easy for developers to create machine learning ap
 - **Code Generation**: Specialized interfaces for coding assistance
 - **Multi-Modal**: Support for text, image, and video inputs
 - **Agent Teams**: CrewAI integration for collaborative AI tasks
+- **Browser Automation**: AI agents that can perform web-based tasks
 
 ### Model Support
 
@@ -30,6 +31,7 @@ A Python package that makes it easy for developers to create machine learning ap
 | DeepSeek | Multi-purpose | deepseek-chat, deepseek-coder, deepseek-vision |
 | CrewAI | Agent Teams | Support Team, Article Team |
 | Qwen | Language | qwen-turbo, qwen-plus, qwen-max |
+| Browser | Automation | browser-use-agent |
 
 ## Installation
 
@@ -61,6 +63,7 @@ pip install 'ai-gradio[smolagents]' # SmolagentsAI support
 pip install 'ai-gradio[fireworks]'  # Fireworks support
 pip install 'ai-gradio[together]'   # Together support
 pip install 'ai-gradio[qwen]'       # Qwen support
+pip install 'ai-gradio[browser]'    # Browser support
 ```
 
 ## Usage
@@ -132,6 +135,26 @@ gr.load(
     title='AI Writing Team'
 ).launch()
 ```
+
+#### Browser Automation
+```python
+import gradio as gr
+import ai_gradio
+
+# Create a browser automation interface
+gr.load(
+    name='browser:browser-use-agent',
+    src=ai_gradio.registry,
+    title='AI Browser Assistant',
+    description='Let AI help with web tasks'
+).launch()
+```
+
+Example tasks:
+- Flight searches on Google Flights
+- Weather lookups
+- Product price comparisons
+- News searches
 
 ## Requirements
 
