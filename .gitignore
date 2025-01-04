@@ -5,9 +5,12 @@ __pycache__/
 # Virtual environment
 env/
 .venv/
+venv/**
+venv/
 
 # Package artifacts
 dist/
 build/
 *.egg-info/
 .codegpt
+.vscode

@@ -297,6 +297,16 @@ try:
 except ImportError:
     pass
 
+try:
+    from .browser_use_gradio import registry as browser_use_registry
+    registry.update({f"browser:{k}": browser_use_registry for k in [
+        'gpt-4-turbo',
+        'gpt-4',
+        'gpt-3.5-turbo'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
