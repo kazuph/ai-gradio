@@ -47,47 +47,112 @@ def handle_user_msg(message: str):
         return message
     elif type(message) is dict:
         if message["files"] is not None and len(message["files"]) > 0:
-            ext = os.path.splitext(message["files"][-1])[1].strip(".")
-            if ext.lower() in ["png", "jpg", "jpeg", "gif", "pdf"]:
-                encoded_str = get_image_base64(message["files"][-1], ext)
-            else:
-                raise NotImplementedError(f"Not supported file type {ext}")
-            content = [
-                {"type": "text", "text": message["text"]},
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": encoded_str,
-                    }
-                },
-            ]
+            parts = []
+            if message["text"]:
+                parts.append({"type": "text", "text": message["text"]})
+            
+            for file in message["files"]:
+                ext = os.path.splitext(file)[1].strip(".").lower()
+                
+                # Handle text-based files
+                if ext in ["txt", "md", "py", "js", "html", "css", "json", "csv"]:
+                    try:
+                        with open(file, "r") as f:
+                            content = f.read()
+                            parts.append({"type": "text", "text": content})
+                    except Exception as e:
+                        print(f"Error reading text file: {e}")
+                        continue
+                
+                # Handle images
+                elif ext in ["png", "jpg", "jpeg", "gif"]:
+                    try:
+                        encoded_str = get_image_base64(file, ext)
+                        parts.append({
+                            "type": "image_url",
+                            "image_url": {"url": encoded_str}
+                        })
+                    except Exception as e:
+                        print(f"Error processing image: {e}")
+                        continue
+                
+                # Handle PDFs
+                elif ext == "pdf":
+                    try:
+                        # You might want to add PDF text extraction here
+                        # For now, we'll just mention it's a PDF
+                        parts.append({
+                            "type": "text",
+                            "text": f"[PDF file: {os.path.basename(file)}]"
+                        })
+                    except Exception as e:
+                        print(f"Error processing PDF: {e}")
+                        continue
+                else:
+                    print(f"Unsupported file type: {ext}")
+                    continue
+            
+            return parts
         else:
-            content = message["text"]
-        return content
+            return message["text"]
     else:
-        raise NotImplementedError
+        raise NotImplementedError(f"Unsupported message type: {type(message)}")
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str, multimodal: bool = False):
     def fn(message, history):
         inputs = preprocess(message, history)
         client = Groq(api_key=api_key)
         
-        # Convert complex message content to string format
+        # Format messages for Groq
         messages = []
+        current_model = model_name  # Store the original model name
+        
         for msg in inputs["messages"]:
-            content = msg["content"]
-            if isinstance(content, list):
-                # For multimodal content, just use the text portion
-                text_parts = [item["text"] for item in content if item["type"] == "text"]
-                content = " ".join(text_parts)
-            msg["content"] = content
-            messages.append(msg)
+            if isinstance(msg["content"], list):
+                # Already in the correct format for multimodal
+                messages.append({
+                    "role": msg["role"],
+                    "content": msg["content"]
+                })
+            elif isinstance(msg["content"], dict):
+                # Convert to list format
+                content_parts = []
+                if "text" in msg["content"]:
+                    content_parts.append({
+                        "type": "text",
+                        "text": msg["content"]["text"]
+                    })
+                if "image_url" in msg["content"]:
+                    content_parts.append({
+                        "type": "image_url",
+                        "image_url": msg["content"]["image_url"]
+                    })
+                messages.append({
+                    "role": msg["role"],
+                    "content": content_parts
+                })
+            else:
+                # Plain text message
+                messages.append({
+                    "role": msg["role"],
+                    "content": [{"type": "text", "text": str(msg["content"])}]
+                })
+        
+        # Use vision model if message contains images
+        has_images = any(
+            isinstance(msg["content"], list) and 
+            any(part.get("type") == "image_url" for part in msg["content"])
+            for msg in messages
+        )
+        if has_images:
+            current_model = "llama-3.2-11b-vision-preview"
         
         completion = client.chat.completions.create(
-            model=model_name,
+            model=current_model,  # Use the current_model instead of model_name
             messages=messages,
             stream=True,
         )
+        
         response_text = ""
         for chunk in completion:
             delta = chunk.choices[0].delta.content or ""
@@ -106,16 +171,40 @@ def get_interface_args(pipeline):
             files = None
             for user_msg, assistant_msg in history:
                 if assistant_msg is not None:
-                    messages.append({"role": "user", "content": handle_user_msg(user_msg)})
-                    messages.append({"role": "assistant", "content": assistant_msg})
+                    # Format user message
+                    user_content = handle_user_msg(user_msg)
+                    if isinstance(user_content, list):
+                        # For multimodal content, extract text only
+                        text_parts = [
+                            part["text"] for part in user_content 
+                            if part["type"] == "text"
+                        ]
+                        user_content = " ".join(text_parts)
+                    messages.append({"role": "user", "content": user_content})
+                    
+                    # Format assistant message (always as string)
+                    messages.append({"role": "assistant", "content": str(assistant_msg)})
                 else:
                     files = user_msg
+            
+            # Handle current message
             if type(message) is str and files is not None:
                 message = {"text": message, "files": files}
             elif type(message) is dict and files is not None:
                 if message["files"] is None or len(message["files"]) == 0:
                     message["files"] = files
-            messages.append({"role": "user", "content": handle_user_msg(message)})
+            
+            # Format current user message
+            current_content = handle_user_msg(message)
+            if isinstance(current_content, list):
+                # For multimodal content, extract text only
+                text_parts = [
+                    part["text"] for part in current_content 
+                    if part["type"] == "text"
+                ]
+                current_content = " ".join(text_parts)
+            messages.append({"role": "user", "content": current_content})
+            
             return {"messages": messages}
 
         postprocess = lambda x: x
