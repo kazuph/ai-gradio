@@ -143,7 +143,7 @@ import ai_gradio
 
 # Create a browser automation interface
 gr.load(
-    name='browser:browser-use-agent',
+    name='browser:gpt-4-turbo',
     src=ai_gradio.registry,
     title='AI Browser Assistant',
     description='Let AI help with web tasks'
