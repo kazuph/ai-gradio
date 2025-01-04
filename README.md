@@ -66,6 +66,11 @@ For Gemini:
 export GEMINI_API_KEY=<your token>
 ```
 
+For Groq:
+```bash
+export GROQ_API_KEY=<your token>
+```
+
 For Anthropic:
 ```bash
 export ANTHROPIC_API_KEY=<your token>
@@ -109,7 +114,7 @@ import ai_gradio
 
 # Create a Gradio interface
 gr.load(
-    name='openai:gpt-4-turbo',  # or 'gemini:gemini-1.5-flash' for Gemini, or 'xai:grok-beta' for Grok
+    name='openai:gpt-4-turbo',  # or 'gemini:gemini-1.5-flash' for Gemini, 'groq:llama-3.2-70b-chat' for Groq
     src=ai_gradio.registry,
     title='AI Chat',
     description='Chat with an AI model'
@@ -414,6 +419,12 @@ demo.launch()
 - gpt-4
 - gpt-3.5-turbo
 
+### Groq Models
+- llama-3.2-70b-chat
+- mixtral-8x7b-chat
+- gemma-7b-it
+- llama-3.2-11b-vision-preview
+
 ### Gemini Models
 - gemini-pro
 - gemini-pro-vision
@@ -503,6 +514,22 @@ demo.launch()
 - deepseek-chat
 - deepseek-coder
 - deepseek-vision
+
+### Groq Models
+- llama-3.2-11b-vision-preview
+- llama-3.2-70b-chat
+- mixtral-8x7b-chat
+- gemma-7b-it
+
+### Text Generation with Groq
+```python
+gr.load(
+    name='groq:llama-3.2-70b-chat',
+    src=ai_gradio.registry,
+    title='Groq Chat',
+    description='Chat with Groq'
+).launch()
+```
 
 ## Requirements
 
@@ -732,6 +759,8 @@ For Groq:
 ```bash
 export GROQ_API_KEY=<your token>
 ```
+
+os.environ["GROQ_API_KEY"] = "your-api-key"
 
 
 
