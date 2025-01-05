@@ -95,6 +95,14 @@ gr.load(
     title='AI Chat',
     description='Chat with an AI model'
 ).launch()
+
+# Create a coding assistant
+gr.load(
+    name='gemini:gemini-2.0-flash-thinking-exp-1219',  # or 'openai:gpt-4-turbo', 'anthropic:claude-3-opus'
+    src=ai_gradio.registry,
+    coder=True,
+    title='Gemini Code Generator',
+).launch()
 ```
 
 ### Advanced Features
