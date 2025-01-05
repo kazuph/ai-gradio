@@ -137,6 +137,13 @@ gr.load(
 ```
 
 #### Browser Automation
+
+```bash
+playwright install
+```
+
+use python 3.11+ for browser use
+
 ```python
 import gradio as gr
 import ai_gradio
