@@ -505,6 +505,16 @@ def registry(
             .history_chatbot {
                 height: 100%;
             }
+
+            /* Add new CSS for image upload */
+            .image-upload-section {
+                margin-bottom: 16px;
+            }
+            
+            .image-upload-label {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
         """)
         with interface:
             history = gr.State([])
@@ -521,6 +531,14 @@ def registry(
                                         <h1>Gemini Code Generator</h1>
                                     </div>
                                 """)
+                                
+                                # Add image upload section
+                                with gr.Group(elem_classes="image-upload-section"):
+                                    image_input = gr.Image(
+                                        label="Upload Reference Images",
+                                        type="filepath",
+                                        height=200
+                                    )
                                 
                                 input = antd.InputTextarea(
                                     size="large",
@@ -599,10 +617,8 @@ def registry(
                     return match.group(1).strip()
                 return text.strip()
 
-            def generate_code(query, setting, history):
-                # Convert messages to Gemini's expected format
+            def generate_code(query, image, setting, history):
                 messages = []
-                # Add system message
                 messages.append({
                     "role": "user",
                     "parts": [{"text": setting["system"]}]
@@ -623,10 +639,15 @@ def registry(
                         "parts": [{"text": h[1]}]
                     })
                 
-                # Add current query
+                # Add current query with image if provided
+                current_message = []
+                if image:
+                    image_data = genai.upload_file(image)
+                    current_message.append(image_data)
+                current_message.append({"text": query})
                 messages.append({
                     "role": "user",
-                    "parts": [{"text": query}]
+                    "parts": current_message
                 })
                 
                 genai.configure(api_key=api_key)
@@ -680,7 +701,7 @@ def registry(
             
             btn.click(
                 generate_code,
-                inputs=[input, setting, history],
+                inputs=[input, image_input, setting, history],
                 outputs=[code_output, history, preview, state_tab, code_drawer]
             )
             

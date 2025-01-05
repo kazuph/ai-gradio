@@ -2,8 +2,6 @@ import gradio as gr
 import ai_gradio
 
 demo = gr.load(
-    name='browser:gpt-4-turbo',
+    name='gemini:gemini-2.0-flash-thinking-exp-1219',
     src=ai_gradio.registry,
-    title='Browser Agent',
-    description='AI agent that can interact with web browsers'
 ).launch()
