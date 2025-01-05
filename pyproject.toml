@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.2.3"
+version = "0.2.4"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -63,8 +63,8 @@ sambanova = ["openai>=1.58.1"]
 hyperbolic = ["openai>=1.58.1"]
 qwen = ["openai>=1.58.1"]
 browser = [
-    "browser-use>=0.1.0",
-    "playwright>=1.41.0"
+    "browser-use>=0.1.16",
+    "playwright>=1.49.1"
 ]
 all = [
     "openai>=1.58.1",
