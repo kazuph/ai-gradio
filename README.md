@@ -96,7 +96,16 @@ gr.load(
     description='Chat with an AI model'
 ).launch()
 
-# Create a coding assistant
+# Create a coding assistant with OpenAI
+gr.load(
+    name='openai:gpt-4-turbo',
+    src=ai_gradio.registry,
+    coder=True,
+    title='OpenAI Code Assistant',
+    description='Generate and review code with GPT-4'
+).launch()
+
+# Create a coding assistant with Gemini
 gr.load(
     name='gemini:gemini-2.0-flash-thinking-exp-1219',  # or 'openai:gpt-4-turbo', 'anthropic:claude-3-opus'
     src=ai_gradio.registry,
