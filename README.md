@@ -171,6 +171,21 @@ Example tasks:
 - Product price comparisons
 - News searches
 
+#### Swarms Integration
+```python
+import gradio as gr
+import ai_gradio
+
+# Create a chat interface with Swarms
+gr.load(
+    name='swarms:gpt-4-turbo',  # or other OpenAI models
+    src=ai_gradio.registry,
+    agent_name="Stock-Analysis-Agent",  # customize agent name
+    title='Swarms Chat',
+    description='Chat with an AI agent powered by Swarms'
+).launch()
+```
+
 ## Requirements
 
 ### Core Requirements

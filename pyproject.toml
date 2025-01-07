@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.2.5"
+version = "0.2.6"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -79,13 +79,21 @@ all = [
     "sambanova>=0.0.1",
     "hyperbolic>=1.58.1",
     "groq>=0.3.0",
-    "browser-use>=0.1.0"
+    "browser-use>=0.1.0",
+    "swarms>=6.8.9",
+    "swarm-models>=0.3.0",
+    "swarms-memory>=0.1.2"
 ]
 groq = ["groq>=0.3.0"]
 fireworks = ["openai>=1.58.1"]
 together = ["openai>=1.58.1"]
 deepseek = ["openai>=1.58.1"]
 smolagents = ["smolagents>=0.1.3"]
+swarms = [
+    "swarms>=6.8.9",
+    "swarm-models>=0.3.0",
+    "swarms-memory>=0.1.2"
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
