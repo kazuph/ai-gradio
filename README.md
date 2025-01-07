@@ -102,7 +102,7 @@ gr.load(
     src=ai_gradio.registry,
     coder=True,
     title='OpenAI Code Assistant',
-    description='Generate and review code with GPT-4'
+    description='OpenAI Code Generator'
 ).launch()
 
 # Create a coding assistant with Gemini
