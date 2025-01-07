@@ -1,8 +1,10 @@
 import gradio as gr
 import ai_gradio
 
-demo = gr.load(
-    name='gemini:gemini-2.0-flash-thinking-exp-1219',
+# Create a chat interface with Swarms
+gr.load(
+    name='swarms:gpt-4o-mini',
     src=ai_gradio.registry,
-    coder=True
+    agent_name="Stock-Analysis-Agent",
+    title='Swarms Chat'
 ).launch()

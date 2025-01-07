@@ -307,6 +307,17 @@ try:
 except ImportError:
     pass
 
+try:
+    from .swarms_gradio import registry as swarms_registry
+    registry.update({f"swarms:{k}": swarms_registry for k in [
+        'gpt-4-turbo',
+        'gpt-4o-mini',
+        'gpt-4',
+        'gpt-3.5-turbo'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -323,7 +334,8 @@ if not registry:
         "pip install 'ai-gradio[fireworks]' for Fireworks support\n"
         "pip install 'ai-gradio[deepseek]' for DeepSeek support\n"
         "pip install 'ai-gradio[smolagents]' for SmolaAgents support\n"
-        "pip install 'ai-gradio[all]' for all providers"
+        "pip install 'ai-gradio[all]' for all providers\n"
+        "pip install 'ai-gradio[swarms]' for Swarms support"
     )
 
 __all__ = ["registry"]
