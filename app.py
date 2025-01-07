@@ -3,8 +3,7 @@ import ai_gradio
 
 # Create a chat interface with Swarms
 gr.load(
-    name='swarms:gpt-4o-mini',
+    name='openai:gpt-4o-realtime-preview-2024-10-01',
     src=ai_gradio.registry,
-    agent_name="Stock-Analysis-Agent",
-    title='Swarms Chat'
+    enable_voice=True
 ).launch()
