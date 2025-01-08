@@ -256,30 +256,6 @@ except ImportError:
     pass
 
 try:
-    from .transformers_gradio import registry as transformers_registry
-    # Instead of a fixed list, we'll use a function that accepts any model name
-    def transformers_wrapper(name=None, **kwargs):
-        # This allows passing either a shorthand name or full model path
-        return transformers_registry(name=name, **kwargs)
-    
-    # Add some common models as examples in the registry
-    common_models = [
-        'tulu-3',
-        'olmo-2-13b',
-        'smolvlm',
-        'paligemma'
-    ]
-    
-    # Add the common models to the registry
-    registry.update({f"transformers:{k}": transformers_registry for k in common_models})
-    
-    # Add a catch-all handler for any other model
-    registry["transformers"] = transformers_wrapper
-
-except ImportError:
-    pass
-
-try:
     from .groq_gradio import registry as groq_registry
     registry.update({f"groq:{k}": groq_registry for k in [
         "llama3-groq-8b-8192-tool-use-preview",
@@ -314,6 +290,18 @@ try:
         'gpt-4o-mini',
         'gpt-4',
         'gpt-3.5-turbo'
+    ]})
+except ImportError:
+    pass
+
+try:
+    from .transformers_gradio import registry as transformers_registry
+    registry.update({f"transformers:{k}": transformers_registry for k in [
+        "phi-4",
+        "tulu-3",
+        "olmo-2-13b",
+        "smolvlm",
+        # Add other default transformers models here
     ]})
 except ImportError:
     pass
