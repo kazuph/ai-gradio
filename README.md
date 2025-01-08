@@ -96,6 +96,14 @@ gr.load(
     description='Chat with an AI model'
 ).launch()
 
+# Create a chat interface with Transformers models
+gr.load(
+    name='transformers:phi-4',  # or 'transformers:tulu-3', 'transformers:olmo-2-13b'
+    src=ai_gradio.registry,
+    title='Local AI Chat',
+    description='Chat with locally running models'
+).launch()
+
 # Create a coding assistant with OpenAI
 gr.load(
     name='openai:gpt-4-turbo',
