@@ -58,7 +58,14 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
             pad_token_id=tokenizer.eos_token_id
         )
         
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # For phi-4, extract only the new generated text
+        if model_name == "phi-4":
+            input_length = inputs["input_ids"].shape[1]
+            generated_tokens = outputs[0][input_length:]
+            response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+        else:
+            response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        
         yield response
 
     return predict
