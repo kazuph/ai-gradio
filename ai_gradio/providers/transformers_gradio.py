@@ -37,7 +37,7 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
             torch_dtype=torch.float32
         )
 
-    def predict(message, history):
+    def predict(message, history, temperature=0.7, max_tokens=512):
         # Format conversation history
         messages = []
         for user_msg, assistant_msg in history:
@@ -52,8 +52,8 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
         # Generate response
         outputs = model.generate(
             **inputs,
-            max_new_tokens=512,
-            temperature=0.7,
+            max_new_tokens=max_tokens,
+            temperature=temperature,
             do_sample=True,
             pad_token_id=tokenizer.eos_token_id
         )
