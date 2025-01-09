@@ -3,6 +3,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import torch
 import gradio as gr
 from typing import Callable
+from PIL import Image
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwargs):
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -16,6 +17,7 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
             "olmo-2-13b": "allenai/OLMo-2-1124-13B-Instruct",
             "smolvlm": "HuggingFaceTB/SmolVLM-Instruct",
             "phi-4": "microsoft/phi-4",
+            "moondream": "vikhyatk/moondream2",
         }
         model_path = model_mapping.get(model_name)
         if not model_path:
@@ -24,7 +26,14 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
     # Load model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
-    if device == "cuda":
+    if model_name == "moondream":
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            revision="2025-01-09",
+            trust_remote_code=True,
+            device_map="auto"
+        )
+    elif device == "cuda":
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
             device_map="auto",
@@ -37,7 +46,13 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
             torch_dtype=torch.float32
         )
 
-    def predict(message, history, temperature=0.7, max_tokens=512):
+    def predict(message, history, image=None, temperature=0.7, max_tokens=512):
+        if model_name == "moondream" and image is not None:
+            # Handle image query for Moondream
+            response = model.query(image, message)["answer"]
+            yield response
+            return
+
         # Format conversation history
         messages = []
         for user_msg, assistant_msg in history:
@@ -79,10 +94,20 @@ def get_interface_args(pipeline):
             return response
 
         return None, None, preprocess, postprocess
+    elif pipeline == "vision-chat":
+        def preprocess(message, history):
+            return {"message": message, "history": history}
+
+        def postprocess(response):
+            return response
+
+        return [gr.Textbox(label="Message"), gr.Image(type="pil")], None, preprocess, postprocess
     else:
         raise ValueError(f"Unsupported pipeline type: {pipeline}")
 
 def get_pipeline(model_name):
+    if model_name == "moondream":
+        return "vision-chat"
     return "chat"
 
 def registry(name: str = None, **kwargs):
@@ -90,12 +115,22 @@ def registry(name: str = None, **kwargs):
     inputs, outputs, preprocess, postprocess = get_interface_args(pipeline)
     fn = get_fn(name, preprocess, postprocess, **kwargs)
 
-    interface = gr.ChatInterface(
-        fn=fn,
-        additional_inputs=[
-            gr.Slider(0, 1, 0.7, label="Temperature"),
-            gr.Slider(1, 2048, 512, label="Max tokens"),
-        ]
-    )
+    if pipeline == "vision-chat":
+        interface = gr.ChatInterface(
+            fn=fn,
+            additional_inputs=[
+                gr.Slider(0, 1, 0.7, label="Temperature"),
+                gr.Slider(1, 2048, 512, label="Max tokens"),
+            ],
+            multimodal=True
+        )
+    else:
+        interface = gr.ChatInterface(
+            fn=fn,
+            additional_inputs=[
+                gr.Slider(0, 1, 0.7, label="Temperature"),
+                gr.Slider(1, 2048, 512, label="Max tokens"),
+            ]
+        )
     
     return interface 

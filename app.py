@@ -2,6 +2,6 @@ import gradio as gr
 import ai_gradio
 
 gr.load(
-    name='transformers:phi-4',
+    name='transformers:moondream',
     src=ai_gradio.registry
 ).launch()
