@@ -47,6 +47,9 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
         )
 
     def predict(message, history, temperature=0.7, max_tokens=512, image=None):
+        # Create a new list for history to avoid sharing between sessions
+        history = list(history) if history else []
+        
         if model_name == "moondream":
             if isinstance(message, dict):
                 text = message["text"]
@@ -69,8 +72,8 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
                 return "Please provide an image to analyze."
 
         # Format conversation history
-        if isinstance(message, dict):  # Handle multimodal input
-            message = message["text"]  # Extract text from multimodal message
+        if isinstance(message, dict):
+            message = message["text"]
         
         messages = []
         for user_msg, assistant_msg in history:
