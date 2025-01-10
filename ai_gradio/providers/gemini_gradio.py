@@ -1,6 +1,7 @@
 import os
 from typing import Callable
 import gradio as gr
+import google.generativeai as genai2
 from google import genai
 import base64
 import json
@@ -19,7 +20,6 @@ from gradio_webrtc import AsyncAudioVideoStreamHandler, VideoEmitType, AudioEmit
 from io import BytesIO
 from PIL import Image
 import time
-import google.generativeai as genai2
 
 
 
