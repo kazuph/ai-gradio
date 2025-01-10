@@ -86,13 +86,15 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
         inputs = tokenizer(input_text, return_tensors="pt").to(device)
 
         # Generate response
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_tokens,
-            temperature=temperature,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
+        generation_config = {
+            "input_ids": inputs["input_ids"],
+            "max_new_tokens": max_tokens,
+            "temperature": float(temperature),  # Ensure temperature is a float
+            "do_sample": True,
+            "pad_token_id": tokenizer.eos_token_id
+        }
+        
+        outputs = model.generate(**generation_config)
         
         # For phi-4, extract only the new generated text
         if model_name == "phi-4":
