@@ -134,6 +134,16 @@ gr.load(
 ).launch()
 ```
 
+#### Camera Mode
+```python
+# Create a vision-enabled interface with camera support
+gr.load(
+    name='gemini:gemini-2.0-flash-exp',
+    src=ai_gradio.registry,
+    camera=True,
+).launch()
+```
+
 #### Multi-Provider Interface
 ```python
 import gradio as gr
