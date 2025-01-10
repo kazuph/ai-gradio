@@ -60,17 +60,13 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
                     try:
                         image = Image.open(image)
                     except Exception as e:
-                        yield f"Error processing image: {str(e)}"
-                        return
+                        return f"Error processing image: {str(e)}"
                     
-                # Remove clear_cache parameter
+                # Generate response and return as a string
                 response = model.query(image, text)["answer"]
-                yield response
-                return
+                return response
             else:
-                response = "Please provide an image to analyze."
-                yield response
-                return
+                return "Please provide an image to analyze."
 
         # Format conversation history
         if isinstance(message, dict):  # Handle multimodal input
@@ -105,7 +101,7 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
         else:
             response = tokenizer.decode(outputs[0], skip_special_tokens=True)
         
-        yield response
+        return response
 
     return predict
 
