@@ -47,13 +47,27 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
         )
 
     def predict(message, history, image=None, temperature=0.7, max_tokens=512):
-        if model_name == "moondream" and image is not None:
-            # Handle image query for Moondream
-            response = model.query(image, message)["answer"]
-            yield response
-            return
+        if model_name == "moondream":
+            if isinstance(message, dict):
+                text = message["text"]
+                # Get the first image from files if available
+                files = message.get("files", [])
+                image = files[0] if files else None
+                
+            if image is not None:
+                response = model.query(image, text)["answer"]
+                yield response
+                return
+            else:
+                # Handle text-only queries
+                response = "Please provide an image to analyze."
+                yield response
+                return
 
         # Format conversation history
+        if isinstance(message, dict):  # Handle multimodal input
+            message = message["text"]  # Extract text from multimodal message
+        
         messages = []
         for user_msg, assistant_msg in history:
             messages.append({"role": "user", "content": user_msg})
@@ -122,7 +136,7 @@ def registry(name: str = None, **kwargs):
                 gr.Slider(0, 1, 0.7, label="Temperature"),
                 gr.Slider(1, 2048, 512, label="Max tokens"),
             ],
-            multimodal=True
+            multimodal=True  # Enable multimodal input
         )
     else:
         interface = gr.ChatInterface(

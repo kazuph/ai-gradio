@@ -301,6 +301,7 @@ try:
         "tulu-3",
         "olmo-2-13b",
         "smolvlm",
+        "moondream",
         # Add other default transformers models here
     ]})
 except ImportError:
