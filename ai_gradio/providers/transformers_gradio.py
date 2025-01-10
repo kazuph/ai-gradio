@@ -63,8 +63,8 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
                         yield f"Error processing image: {str(e)}"
                         return
                     
-                # Create a new model instance for each request to avoid sharing state
-                response = model.query(image, text, clear_cache=True)["answer"]
+                # Remove clear_cache parameter
+                response = model.query(image, text)["answer"]
                 yield response
                 return
             else:
