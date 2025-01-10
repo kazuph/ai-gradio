@@ -31,7 +31,7 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
             model_path,
             revision="2025-01-09",
             trust_remote_code=True,
-            device_map="auto"
+            device_map={"": "cuda" if torch.cuda.is_available() else "cpu"}
         )
     elif device == "cuda":
         model = AutoModelForCausalLM.from_pretrained(
