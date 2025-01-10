@@ -52,14 +52,21 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
                 text = message["text"]
                 # Get the first image from files if available
                 files = message.get("files", [])
-                image = files[0] if files else None
+                image = files[0] if files else image  # Use provided image if no files
                 
             if image is not None:
+                # Ensure image is a PIL Image
+                if not isinstance(image, Image.Image):
+                    try:
+                        image = Image.open(image)
+                    except Exception as e:
+                        yield f"Error processing image: {str(e)}"
+                        return
+                    
                 response = model.query(image, text)["answer"]
                 yield response
                 return
             else:
-                # Handle text-only queries
                 response = "Please provide an image to analyze."
                 yield response
                 return
