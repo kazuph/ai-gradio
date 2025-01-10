@@ -46,7 +46,7 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, **kwarg
             torch_dtype=torch.float32
         )
 
-    def predict(message, history, image=None, temperature=0.7, max_tokens=512):
+    def predict(message, history, temperature=0.7, max_tokens=512, image=None):
         if model_name == "moondream":
             if isinstance(message, dict):
                 text = message["text"]
