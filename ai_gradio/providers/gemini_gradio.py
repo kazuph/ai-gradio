@@ -1,7 +1,7 @@
 import os
 from typing import Callable
 import gradio as gr
-import google.generativeai as genai
+from google import genai
 import base64
 import json
 import numpy as np
@@ -14,6 +14,13 @@ import re
 import modelscope_studio.components.base as ms
 import modelscope_studio.components.legacy as legacy
 import modelscope_studio.components.antd as antd
+import asyncio
+from gradio_webrtc import AsyncAudioVideoStreamHandler, VideoEmitType, AudioEmitType, async_aggregate_bytes_to_16bit
+from io import BytesIO
+from PIL import Image
+import time
+import google.generativeai as genai2
+
 
 
 __version__ = "0.0.3"
@@ -98,145 +105,100 @@ def detection(frame, conf_threshold=0.3):
         return frame
 
 
-class GeminiHandler(StreamHandler):
-    def __init__(self, expected_layout="mono", output_sample_rate=24000, output_frame_size=480) -> None:
-        super().__init__(expected_layout, output_sample_rate, output_frame_size, input_sample_rate=24000)
-        self.config = GeminiConfig()
-        self.ws = None
-        self.all_output_data = None
-        self.audio_processor = AudioProcessor()
-        self.current_frame = None
+def encode_audio(data: np.ndarray) -> dict:
+    """Encode Audio data to send to the server"""
+    return {
+        "mime_type": "audio/pcm",
+        "data": base64.b64encode(data.tobytes()).decode("UTF-8")
+    }
 
-    def copy(self):
-        handler = GeminiHandler(
+def encode_image(data: np.ndarray) -> dict:
+    """Encode image data to send to the server"""
+    with BytesIO() as output_bytes:
+        pil_image = Image.fromarray(data)
+        pil_image.save(output_bytes, "JPEG")
+        bytes_data = output_bytes.getvalue()
+    base64_str = str(base64.b64encode(bytes_data), "utf-8")
+    return {"mime_type": "image/jpeg", "data": base64_str}
+
+
+class GeminiHandler(AsyncAudioVideoStreamHandler):
+    def __init__(
+        self, expected_layout="mono", output_sample_rate=24000, output_frame_size=480
+    ) -> None:
+        super().__init__(
+            expected_layout,
+            output_sample_rate,
+            output_frame_size,
+            input_sample_rate=16000,
+        )
+        self.audio_queue = asyncio.Queue()
+        self.video_queue = asyncio.Queue()
+        self.quit = asyncio.Event()
+        self.session = None
+        self.last_frame_time = 0
+
+    def copy(self) -> "GeminiHandler":
+        return GeminiHandler(
             expected_layout=self.expected_layout,
             output_sample_rate=self.output_sample_rate,
             output_frame_size=self.output_frame_size,
         )
-        return handler
+    
+    async def video_receive(self, frame: np.ndarray):
+        if self.session:
+            # send image every 1 second
+            if time.time() - self.last_frame_time > 1:
+                self.last_frame_time = time.time()
+                await self.session.send(encode_image(frame))
+                if self.latest_args[2] is not None:
+                    await self.session.send(encode_image(self.latest_args[2]))
+        self.video_queue.put_nowait(frame)
+    
+    async def video_emit(self) -> VideoEmitType:
+        return await self.video_queue.get()
 
-    def _initialize_websocket(self):
-        try:
-            self.ws = websockets.sync.client.connect(self.config.ws_url, timeout=30)
-            initial_request = {
-                "setup": {
-                    "model": self.config.model,
-                }
-            }
-            self.ws.send(json.dumps(initial_request))
-            setup_response = json.loads(self.ws.recv())
-            print(f"Setup response: {setup_response}")
-        except websockets.exceptions.WebSocketException as e:
-            print(f"WebSocket connection failed: {str(e)}")
-            self.ws = None
-        except Exception as e:
-            print(f"Setup failed: {str(e)}")
-            self.ws = None
+    async def connect(self, api_key: str):
+        if self.session is None:
+            client = genai.Client(api_key=api_key, http_options={"api_version": "v1alpha"})
+            config = {"response_modalities": ["AUDIO"]}
+            async with client.aio.live.connect(
+                model="gemini-2.0-flash-exp", config=config
+            ) as session:
+                self.session = session
+                asyncio.create_task(self.receive_audio())
+                await self.quit.wait()
 
-    def process_video_frame(self, frame):
-        self.current_frame = frame
-        _, buffer = cv2.imencode('.jpg', frame)
-        image_data = base64.b64encode(buffer).decode('utf-8')
-        return image_data
+    async def generator(self):
+        while not self.quit.is_set():
+            turn = self.session.receive()
+            async for response in turn:
+                if data := response.data:
+                    yield data
+    
+    async def receive_audio(self):
+        async for audio_response in async_aggregate_bytes_to_16bit(
+            self.generator()
+        ):
+            self.audio_queue.put_nowait(audio_response)
 
-    def receive(self, frame: tuple[int, np.ndarray]) -> None:
-        try:
-            if not self.ws:
-                self._initialize_websocket()
+    async def receive(self, frame: tuple[int, np.ndarray]) -> None:
+        _, array = frame
+        array = array.squeeze()
+        audio_message = encode_audio(array)
+        if self.session:
+            await self.session.send(audio_message)
 
-            _, array = frame
-            array = array.squeeze()
-            
-            audio_data = self.audio_processor.encode_audio(array, self.output_sample_rate)
-            
-            message = {
-                "realtimeInput": {
-                    "mediaChunks": [
-                        {
-                            "mimeType": f"audio/pcm;rate={self.output_sample_rate}",
-                            "data": audio_data["realtimeInput"]["mediaChunks"][0]["data"],
-                        }
-                    ],
-                }
-            }
-            
-            if self.current_frame is not None:
-                image_data = self.process_video_frame(self.current_frame)
-                message["realtimeInput"]["mediaChunks"].append({
-                    "mimeType": "image/jpeg",
-                    "data": image_data
-                })
-
-            self.ws.send(json.dumps(message))
-        except Exception as e:
-            print(f"Error in receive: {str(e)}")
-            if self.ws:
-                self.ws.close()
-            self.ws = None
-
-    def _process_server_content(self, content):
-        for part in content.get("parts", []):
-            data = part.get("inlineData", {}).get("data", "")
-            if data:
-                audio_array = self.audio_processor.process_audio_response(data)
-                if self.all_output_data is None:
-                    self.all_output_data = audio_array
-                else:
-                    self.all_output_data = np.concatenate((self.all_output_data, audio_array))
-
-                while self.all_output_data.shape[-1] >= self.output_frame_size:
-                    yield (self.output_sample_rate, self.all_output_data[: self.output_frame_size].reshape(1, -1))
-                    self.all_output_data = self.all_output_data[self.output_frame_size :]
-
-    def generator(self):
-        while True:
-            if not self.ws:
-                print("WebSocket not connected")
-                yield None
-                continue
-
-            try:
-                message = self.ws.recv(timeout=5)
-                msg = json.loads(message)
-
-                if "serverContent" in msg:
-                    content = msg["serverContent"].get("modelTurn", {})
-                    yield from self._process_server_content(content)
-            except TimeoutError:
-                print("Timeout waiting for server response")
-                yield None
-            except Exception as e:
-                print(f"Error in generator: {str(e)}")
-                yield None
-
-    def emit(self) -> tuple[int, np.ndarray] | None:
-        if not self.ws:
-            return None
-        if not hasattr(self, "_generator"):
-            self._generator = self.generator()
-        try:
-            return next(self._generator)
-        except StopIteration:
-            self.reset()
-            return None
-
-    def reset(self) -> None:
-        if hasattr(self, "_generator"):
-            delattr(self, "_generator")
-        self.all_output_data = None
+    async def emit(self) -> AudioEmitType:
+        if not self.args_set.is_set():
+            await self.wait_for_args()
+        if self.session is None:
+            asyncio.create_task(self.connect(self.latest_args[1]))
+        array = await self.audio_queue.get()
+        return (self.output_sample_rate, array)
 
     def shutdown(self) -> None:
-        if self.ws:
-            self.ws.close()
-
-    def check_connection(self):
-        try:
-            if not self.ws or self.ws.closed:
-                self._initialize_websocket()
-            return True
-        except Exception as e:
-            print(f"Connection check failed: {str(e)}")
-            return False
+        self.quit.set()
 
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str):
@@ -245,7 +207,7 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
         is_gemini = model_name.startswith("gemini-")
         
         if is_gemini:
-            genai.configure(api_key=api_key)
+            genai2.configure(api_key=api_key)
             
             generation_config = {
                 "temperature": 1,
@@ -255,7 +217,7 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
                 "response_mime_type": "text/plain",
             }
             
-            model = genai.GenerativeModel(
+            model = genai2.GenerativeModel(
                 model_name=model_name,
                 generation_config=generation_config
             )
@@ -443,14 +405,13 @@ def registry(
     token: str | None = None, 
     examples: list | None = None,
     enable_voice: bool = False,
-    enable_video: bool = False,
+    camera: bool = False,
     coder: bool = False,
     **kwargs
 ):
     env_key = "GEMINI_API_KEY"
     api_key = token or os.environ.get(env_key)
-    if not api_key:
-        raise ValueError(f"{env_key} environment variable is not set.")
+    show_api_input = api_key is None
 
     if coder:
         interface = gr.Blocks(css="""
@@ -642,7 +603,7 @@ def registry(
                 # Add current query with image if provided
                 current_message = []
                 if image:
-                    image_data = genai.upload_file(image)
+                    image_data = genai2.upload_file(image)
                     current_message.append(image_data)
                 current_message.append({"text": query})
                 messages.append({
@@ -650,8 +611,8 @@ def registry(
                     "parts": current_message
                 })
                 
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel(model_name=name)
+                genai2.configure(api_key=api_key)
+                model = genai2.GenerativeModel(model_name=name)
                 response = model.generate_content(messages, stream=True)
                 
                 response_text = ""
@@ -709,7 +670,71 @@ def registry(
 
         return interface
 
-    # Regular chat interface code continues here...
+    # Regular chat interface code
+    if camera:
+        interface = gr.Blocks(css="""
+            #video-source {max-width: 600px !important; max-height: 600 !important;}
+        """)
+        with interface:
+            gr.HTML(
+                """
+                <div style='display: flex; align-items: center; justify-content: center; gap: 20px'>
+                    <div style="background-color: var(--block-background-fill); border-radius: 8px">
+                        <img src="https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png" style="width: 100px; height: 100px;">
+                    </div>
+                    <div>
+                        <h1>Gemini Chat</h1>
+                        <p>Chat with Gemini using real-time audio + video streaming</p>
+                    </div>
+                </div>
+                """
+            )
+            
+            with gr.Row(visible=show_api_input) as api_key_row:
+                api_key_input = gr.Textbox(
+                    label="API Key",
+                    type="password",
+                    placeholder="Enter your API Key",
+                    value=api_key
+                )
+            
+            with gr.Row(visible=not show_api_input) as row:
+                with gr.Column():
+                    webrtc = WebRTC(
+                        label="Video Chat",
+                        modality="audio-video",
+                        mode="send-receive",
+                        elem_id="video-source",
+                        rtc_configuration=get_twilio_turn_credentials(),
+                        icon="https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png",
+                        pulse_color="rgb(35, 157, 225)",
+                        icon_button_color="rgb(35, 157, 225)",
+                    )
+                with gr.Column():
+                    image_input = gr.Image(
+                        label="Image",
+                        type="numpy",
+                        sources=["upload", "clipboard"]
+                    )
+
+                webrtc.stream(
+                    GeminiHandler(),
+                    inputs=[webrtc, api_key_input, image_input],
+                    outputs=[webrtc],
+                    time_limit=90,
+                    concurrency_limit=2,
+                )
+            
+            if show_api_input:
+                api_key_input.submit(
+                    lambda x: (gr.update(visible=False), gr.update(visible=True)),
+                    inputs=[api_key_input],
+                    outputs=[api_key_row, row],
+                )
+
+        return interface
+
+    # Continue with existing chat interface code...
     pipeline = get_pipeline(name)
     inputs, outputs, preprocess, postprocess = get_interface_args(pipeline, name)
     fn = get_fn(name, preprocess, postprocess, api_key)
@@ -719,53 +744,55 @@ def registry(
         kwargs["examples"] = formatted_examples
 
     if pipeline == "chat":
-        if enable_voice or enable_video:
+        if enable_voice:
             interface = gr.Blocks()
             with interface:
                 gr.HTML(
                     """
-                    <div style='text-align: center'>
-                        <h1>Gemini Chat</h1>
+                    <div style='display: flex; align-items: center; justify-content: center; gap: 20px'>
+                        <div style="background-color: var(--block-background-fill); border-radius: 8px">
+                            <img src="https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png" style="width: 100px; height: 100px;">
+                        </div>
+                        <div>
+                            <h1>Gemini Voice Chat</h1>
+                            <p>Chat with Gemini using real-time audio streaming</p>
+                        </div>
                     </div>
                     """
                 )
                 
-                gemini_handler = GeminiHandler()
+                with gr.Row(visible=show_api_input) as api_key_row:
+                    api_key_input = gr.Textbox(
+                        label="API Key",
+                        type="password",
+                        placeholder="Enter your API Key",
+                        value=api_key
+                    )
                 
-                with gr.Row():
-                    with gr.Column(scale=1):
-                        if enable_video:
-                            video = WebRTC(
-                                label="Stream",
-                                mode="send-receive",
-                                modality="video",
-                                rtc_configuration=get_twilio_turn_credentials()
-                            )
-
-                        if enable_voice:
-                            audio = WebRTC(
-                                label="Voice Chat",
-                                modality="audio",
-                                mode="send-receive",
-                                rtc_configuration=get_twilio_turn_credentials(),
-                            )
-
-                if enable_video:
-                    video.stream(
-                        fn=lambda frame: (frame, detection(frame)),
-                        inputs=[video],
-                        outputs=[video],
-                        time_limit=90,
-                        concurrency_limit=10
+                with gr.Row(visible=not show_api_input) as row:
+                    webrtc = WebRTC(
+                        label="Voice Chat",
+                        modality="audio",
+                        mode="send-receive",
+                        rtc_configuration=get_twilio_turn_credentials(),
+                        icon="https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png",
+                        pulse_color="rgb(35, 157, 225)",
+                        icon_button_color="rgb(35, 157, 225)",
                     )
 
-                if enable_voice:
-                    audio.stream(
-                        gemini_handler,
-                        inputs=[audio], 
-                        outputs=[audio], 
-                        time_limit=90, 
-                        concurrency_limit=10
+                    webrtc.stream(
+                        GeminiHandler(),
+                        inputs=[webrtc, api_key_input],
+                        outputs=[webrtc],
+                        time_limit=90,
+                        concurrency_limit=2,
+                    )
+                
+                if show_api_input:
+                    api_key_input.submit(
+                        lambda x: (gr.update(visible=False), gr.update(visible=True)),
+                        inputs=[api_key_input],
+                        outputs=[api_key_row, row],
                     )
         else:
             interface = gr.ChatInterface(
