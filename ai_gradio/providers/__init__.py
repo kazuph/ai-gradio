@@ -17,9 +17,13 @@ def custom_load(name: str, src: dict, **kwargs):
 
 # Store original load function before overriding
 original_load = gr.load
-gr.load = custom_load
+
 
 registry = {}
+
+# Only override gr.load if we have provider-prefixed models
+if any(':' in k for k in registry.keys()):
+    gr.load = custom_load
 
 try:
     from .openai_gradio import registry as openai_registry
