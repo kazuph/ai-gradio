@@ -1,29 +1,31 @@
 import gradio as gr
+from functools import wraps
 
-def custom_load(name: str, src: dict, **kwargs):
-    # Only use custom loading if name contains provider prefix
-    if ':' in name:
-        provider, model = name.split(':')
-        # Create provider-specific model key
-        model_key = f"{provider}:{model}"
+def custom_load_wrapper(original_load):
+    @wraps(original_load)
+    def wrapped_load(name: str, **kwargs):
+        """Custom model loader that handles provider-prefixed models"""
+        if ':' in name:
+            provider, model = name.split(':')
+            # Create provider-specific model key
+            model_key = f"{provider}:{model}"
+            
+            if model_key not in registry:
+                available_models = [k for k in registry.keys()]
+                raise ValueError(f"Model {model_key} not found. Available models: {available_models}")
+            return registry[model_key](name=model, **kwargs)
         
-        if model_key not in src:
-            available_models = [k for k in src.keys()]
-            raise ValueError(f"Model {model_key} not found. Available models: {available_models}")
-        return src[model_key](name=model, **kwargs)
+        # Fall back to original gradio behavior
+        return original_load(name, **kwargs)
     
-    # Fall back to original gradio behavior if no provider prefix
-    return original_load(name, src, **kwargs)
+    return wrapped_load
 
-# Store original load function before overriding
-original_load = gr.load
-
+# Patch gradio's load function
+gr.load = custom_load_wrapper(gr.load)
 
 registry = {}
 
-# Only override gr.load if we have provider-prefixed models
-if any(':' in k for k in registry.keys()):
-    gr.load = custom_load
+
 
 try:
     from .openai_gradio import registry as openai_registry
