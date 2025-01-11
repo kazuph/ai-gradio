@@ -1,22 +1,22 @@
 import gradio as gr
 
 def custom_load(name: str, src: dict, **kwargs):
-    # Split name into provider and model if specified
+    # Only use custom loading if name contains provider prefix
     if ':' in name:
         provider, model = name.split(':')
-    else:
-        provider = 'openai'  # Default to OpenAI if no provider specified
-        model = name
+        # Create provider-specific model key
+        model_key = f"{provider}:{model}"
+        
+        if model_key not in src:
+            available_models = [k for k in src.keys()]
+            raise ValueError(f"Model {model_key} not found. Available models: {available_models}")
+        return src[model_key](name=model, **kwargs)
     
-    # Create provider-specific model key
-    model_key = f"{provider}:{model}"
-    
-    if model_key not in src:
-        available_models = [k for k in src.keys()]
-        raise ValueError(f"Model {model_key} not found. Available models: {available_models}")
-    return src[model_key](name=model, **kwargs)
+    # Fall back to original gradio behavior if no provider prefix
+    return original_load(name, src, **kwargs)
 
-# Add the custom load function to gradio
+# Store original load function before overriding
+original_load = gr.load
 gr.load = custom_load
 
 registry = {}
