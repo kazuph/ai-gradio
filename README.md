@@ -81,6 +81,10 @@ export LUMAAI_API_KEY=<your token>
 export XAI_API_KEY=<your token>
 export COHERE_API_KEY=<your token>
 # ... (other provider keys)
+
+# Twilio credentials (required for WebRTC voice chat)
+export TWILIO_ACCOUNT_SID=<your Twilio account SID>
+export TWILIO_AUTH_TOKEN=<your Twilio auth token>
 ```
 
 ### Quick Start
