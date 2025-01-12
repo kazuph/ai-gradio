@@ -309,11 +309,11 @@ except ImportError:
     pass
 
 try:
-    from .jupyter_agent_gradio import registry as jupyter_registry
+    from .jupyter_agent import registry as jupyter_registry
     registry.update({f"jupyter:{k}": jupyter_registry for k in [
-        "meta-llama/Llama-3.2-3B-Instruct",
-        "meta-llama/Llama-3.1-8B-Instruct",
-        "meta-llama/Llama-3.1-70B-Instruct",
+        'meta-llama/Llama-3.2-3B-Instruct',
+        'meta-llama/Llama-3.1-8B-Instruct', 
+        'meta-llama/Llama-3.1-70B-Instruct'
     ]})
 except ImportError:
     pass
@@ -321,12 +321,14 @@ except ImportError:
 try:
     from .langchain_gradio import registry as langchain_registry
     registry.update({f"langchain:{k}": langchain_registry for k in [
-        'agent-basic',
-        'agent-search',
-        'agent-advanced'
+        'gpt-4-turbo',
+        'gpt-4',
+        'gpt-3.5-turbo',
+        'gpt-3.5-turbo-0125'
     ]})
-except ImportError:
-    pass
+except ImportError as e:
+    print(f"Failed to import LangChain registry: {e}")
+    # Optionally add more detailed error handling here
 
 if not registry:
     raise ImportError(
@@ -344,6 +346,8 @@ if not registry:
         "pip install 'ai-gradio[fireworks]' for Fireworks support\n"
         "pip install 'ai-gradio[deepseek]' for DeepSeek support\n"
         "pip install 'ai-gradio[smolagents]' for SmolaAgents support\n"
+        "pip install 'ai-gradio[jupyter]' for Jupyter support\n"
+        "pip install 'ai-gradio[langchain]' for LangChain support\n"
         "pip install 'ai-gradio[all]' for all providers\n"
         "pip install 'ai-gradio[swarms]' for Swarms support"
     )

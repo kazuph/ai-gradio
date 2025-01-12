@@ -1,11 +1,10 @@
 import gradio as gr
 import ai_gradio
 
-# Load the Jupyter agent with a specific model
+# Launch the Jupyter agent interface
 demo = gr.load(
-    "groq:llama-3.3-70b-versatile",  # Format: "jupyter:{model_name}"
+    "langchain:gpt-4-turbo",  # or other supported models
     src=ai_gradio.registry
 )
 
-# Launch the interface
 demo.launch()

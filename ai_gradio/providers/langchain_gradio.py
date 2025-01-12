@@ -1,68 +1,111 @@
-import os
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_community.document_loaders import WebBaseLoader
-from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.tools.retriever import create_retriever_tool
 from langchain import hub
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
 import gradio as gr
-from typing import Callable
+from typing import Generator, List, Dict
 
-def registry(name: str, token: str | None = None, **kwargs):
-    # Set up environment variables
-    api_key = token or os.environ.get("LANGCHAIN_API_KEY")
-    if not api_key:
-        raise ValueError("LANGCHAIN_API_KEY environment variable is not set.")
-    
-    os.environ["LANGCHAIN_TRACING_V2"] = "true"
-    os.environ["LANGCHAIN_API_KEY"] = api_key
-
-    # Create tools
+def create_agent(model_name: str = None):
+    # Initialize search tool
     search = TavilySearchResults()
+    tools = [search]
     
-    # Create retriever
-    loader = WebBaseLoader("https://docs.smith.langchain.com/overview")
-    docs = loader.load()
-    documents = RecursiveCharacterTextSplitter(
-        chunk_size=1000, chunk_overlap=200
-    ).split_documents(docs)
-    vector = FAISS.from_documents(documents, OpenAIEmbeddings())
-    retriever = vector.as_retriever()
-    
-    retriever_tool = create_retriever_tool(
-        retriever,
-        "langsmith_search",
-        "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
+    # Initialize LLM
+    llm = ChatOpenAI(
+        model_name=model_name if model_name else "gpt-3.5-turbo-0125",
+        temperature=0
     )
-
-    tools = [search, retriever_tool]
-
-    # Create agent components
-    llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
+    
+    # Get the prompt
     prompt = hub.pull("hwchase17/openai-functions-agent")
+    
+    # Create the agent
     agent = create_tool_calling_agent(llm, tools, prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+    
+    # Create the executor
+    return AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-    # Create Gradio interface
-    with gr.Blocks() as interface:
-        chatbot = gr.Chatbot()
-        msg = gr.Textbox()
-        clear = gr.Button("Clear")
+def stream_agent_response(agent: AgentExecutor, message: str, history: List) -> Generator[Dict, None, None]:
+    # First yield the thinking message
+    yield {
+        "role": "assistant",
+        "content": "Let me think about that...",
+        "metadata": {"title": "🤔 Thinking"}
+    }
+    
+    try:
+        # Convert history to LangChain format
+        chat_history = []
+        for msg in history:
+            if msg["role"] == "user":
+                chat_history.append(HumanMessage(content=msg["content"]))
+            elif msg["role"] == "assistant":
+                chat_history.append(AIMessage(content=msg["content"]))
+        
+        # Run the agent
+        response = agent.invoke({
+            "input": message,
+            "chat_history": chat_history
+        })
+        
+        # Yield the final response
+        yield {
+            "role": "assistant",
+            "content": response["output"]
+        }
+                
+    except Exception as e:
+        yield {
+            "role": "assistant",
+            "content": f"Error: {str(e)}",
+            "metadata": {"title": "❌ Error"}
+        }
 
-        def user(user_message, history):
-            return "", history + [[user_message, None]]
+async def interact_with_agent(message: str, history: List, model_name: str = None) -> Generator[List, None, None]:
+    # Add user message
+    history.append({"role": "user", "content": message})
+    yield history
+    
+    # Create agent instance with specified model
+    agent = create_agent(model_name)
+    
+    # Stream agent responses
+    for response in stream_agent_response(agent, message, history):
+        history.append(response)
+        yield history
 
-        def bot(history):
-            user_message = history[-1][0]
-            response = agent_executor.invoke({"input": user_message})
-            history[-1][1] = response["output"]
-            return history
-
-        msg.submit(user, [msg, chatbot], [msg, chatbot], queue=False).then(
-            bot, chatbot, chatbot
+def registry(name: str, **kwargs):
+    # Extract model name from the name parameter
+    model_name = name.split(':')[-1] if ':' in name else None
+    
+    with gr.Blocks() as demo:
+        gr.Markdown("# LangChain Assistant 🦜️")
+        
+        chatbot = gr.Chatbot(
+            type="messages",
+            label="Agent",
+            avatar_images=(None, "https://python.langchain.com/img/favicon.ico"),
+            height=500
         )
-        clear.click(lambda: None, None, chatbot, queue=False)
+        
+        msg = gr.Textbox(
+            label="Your message",
+            placeholder="Type your message here...",
+            lines=1
+        )
 
-    return interface
+        async def handle_message(message, history):
+            async for response in interact_with_agent(message, history, model_name=model_name):
+                yield response
+
+        msg.submit(
+            fn=handle_message,
+            inputs=[msg, chatbot],
+            outputs=[chatbot],
+            api_name="predict"
+        )
+
+    return demo
