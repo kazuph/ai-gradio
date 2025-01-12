@@ -1,30 +1,25 @@
 import gradio as gr
-from functools import wraps
 
-def custom_load_wrapper(original_load):
-    @wraps(original_load)
-    def wrapped_load(name: str, **kwargs):
-        """Custom model loader that handles provider-prefixed models"""
-        if ':' in name:
-            provider, model = name.split(':')
-            # Create provider-specific model key
-            model_key = f"{provider}:{model}"
-            
-            if model_key not in registry:
-                available_models = [k for k in registry.keys()]
-                raise ValueError(f"Model {model_key} not found. Available models: {available_models}")
-            return registry[model_key](name=model, **kwargs)
+def custom_load(name: str, src: dict, **kwargs):
+    # Only use custom loading if name contains provider prefix
+    if ':' in name:
+        provider, model = name.split(':')
+        # Create provider-specific model key
+        model_key = f"{provider}:{model}"
         
-        # Fall back to original gradio behavior
-        return original_load(name, **kwargs)
+        if model_key not in src:
+            available_models = [k for k in src.keys()]
+            raise ValueError(f"Model {model_key} not found. Available models: {available_models}")
+        return src[model_key](name=model, **kwargs)
     
-    return wrapped_load
+    # Fall back to original gradio behavior if no provider prefix
+    return original_load(name, src, **kwargs)
 
-# Patch gradio's load function
-gr.load = custom_load_wrapper(gr.load)
+# Store original load function before overriding
+original_load = gr.load
+gr.load = custom_load
 
 registry = {}
-
 
 
 try:
@@ -309,6 +304,26 @@ try:
         "smolvlm",
         "moondream",
         # Add other default transformers models here
+    ]})
+except ImportError:
+    pass
+
+try:
+    from .jupyter_agent_gradio import registry as jupyter_registry
+    registry.update({f"jupyter:{k}": jupyter_registry for k in [
+        "meta-llama/Llama-3.2-3B-Instruct",
+        "meta-llama/Llama-3.1-8B-Instruct",
+        "meta-llama/Llama-3.1-70B-Instruct",
+    ]})
+except ImportError:
+    pass
+
+try:
+    from .langchain_gradio import registry as langchain_registry
+    registry.update({f"langchain:{k}": langchain_registry for k in [
+        'agent-basic',
+        'agent-search',
+        'agent-advanced'
     ]})
 except ImportError:
     pass

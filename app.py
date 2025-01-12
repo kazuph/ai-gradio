@@ -1,8 +1,11 @@
 import gradio as gr
 import ai_gradio
 
-gr.load(
-    name='gemini:gemini-2.0-flash-exp',
-    src=ai_gradio.registry,
-    camera=True
-).launch()
+# Load the Jupyter agent with a specific model
+demo = gr.load(
+    "groq:llama-3.3-70b-versatile",  # Format: "jupyter:{model_name}"
+    src=ai_gradio.registry
+)
+
+# Launch the interface
+demo.launch()
