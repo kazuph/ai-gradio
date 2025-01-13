@@ -48,7 +48,7 @@ dev = [
 ]
 transformers = ["transformers>=4.37.0", "torch>=2.0.0", "accelerate>=0.27.0", "bitsandbytes>=0.41.0", "einops>=0.8.0", "Pillow>=10.4.0", "pyvips-binary>=8.16.0", "pyvips>=2.2.3", "torchvision>=0.18.1"]
 openai = ["openai>=1.58.1"]
-gemini = ["google-generativeai>=0.8.3", "google-genai>=0.4.0"]
+gemini = ["google-generativeai>=0.8.3", "google-genai==0.3.0"]
 crewai = [
     "crewai>=0.1.0",
     "langchain>=0.1.0",
