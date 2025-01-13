@@ -110,9 +110,6 @@ jupyter = [
     "huggingface-hub>=0.20.0",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["ai_gradio"]
-
 langchain = [
     "langchain",
     "langchain-community",
@@ -120,4 +117,7 @@ langchain = [
     "tavily-python",
     "langchain-openai"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ai_gradio"]
 
