@@ -115,9 +115,9 @@ packages = ["ai_gradio"]
 
 langchain = [
     "langchain",
-    "langchain-openai",
     "langchain-community",
     "langchain-core",
-    "tavily-python"
+    "tavily-python",
+    "langchain-openai"
 ]
 
