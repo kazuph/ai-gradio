@@ -75,6 +75,7 @@ export OPENAI_API_KEY=<your token>
 export GEMINI_API_KEY=<your token>
 export ANTHROPIC_API_KEY=<your token>
 export GROQ_API_KEY=<your token>
+export TAVILY_API_KEY=<your token>  # Required for Langchain agents
 
 # Additional Providers (as needed)
 export LUMAAI_API_KEY=<your token>
@@ -214,6 +215,20 @@ gr.load(
     agent_name="Stock-Analysis-Agent",  # customize agent name
     title='Swarms Chat',
     description='Chat with an AI agent powered by Swarms'
+).launch()
+```
+
+#### Langchain Agents
+```python
+import gradio as gr
+import ai_gradio
+
+# Create a Langchain agent interface
+gr.load(
+    name='langchain:gpt-4-turbo',  # or other supported models
+    src=ai_gradio.registry,
+    title='Langchain Agent',
+    description='AI agent powered by Langchain'
 ).launch()
 ```
 
