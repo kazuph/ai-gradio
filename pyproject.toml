@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.2.11"
+version = "0.2.12"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -33,12 +33,6 @@ dependencies = [
     "numba==0.60.0",
     "python-dotenv",
     "modelscope-studio",
-    "nbformat",
-    "nbconvert",
-    "e2b-code-interpreter",
-    "huggingface-hub",
-    "langchain-core>=0.1.0",
-    "langchain-community>=0.0.10",
 ]
 
 [project.urls]
@@ -120,10 +114,10 @@ jupyter = [
 packages = ["ai_gradio"]
 
 langchain = [
-    "langchain>=0.3.14",
-    "langchain-openai>=0.3.0",
-    "langchain-community>=0.3.14",
-    "langchain-core>=0.3.29",
-    "tavily-python>=0.5.0"
+    "langchain",
+    "langchain-openai",
+    "langchain-community",
+    "langchain-core",
+    "tavily-python"
 ]
 
