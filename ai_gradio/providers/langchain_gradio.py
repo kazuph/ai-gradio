@@ -106,6 +106,6 @@ def registry(name: str, **kwargs):
             inputs=[msg, chatbot],
             outputs=[chatbot],
             api_name="predict"
-        )
+        ).then(lambda _:"", msg, msg)
 
     return demo
