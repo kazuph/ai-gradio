@@ -330,6 +330,24 @@ except ImportError as e:
     print(f"Failed to import LangChain registry: {e}")
     # Optionally add more detailed error handling here
 
+try:
+    from .mistral_gradio import registry as mistral_registry
+    registry.update({f"mistral:{k}": mistral_registry for k in [
+        "mistral-large-latest",
+        "pixtral-large-latest",
+        "ministral-3b-latest",
+        "ministral-8b-latest",
+        "mistral-small-latest",
+        "codestral-latest",
+        "mistral-embed",
+        "mistral-moderation-latest",
+        "pixtral-12b-2409",
+        "open-mistral-nemo",
+        "open-codestral-mamba",
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"

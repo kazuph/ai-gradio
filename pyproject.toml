@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.2.13"
+version = "0.2.14"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -116,6 +116,10 @@ langchain = [
     "langchain-core",
     "tavily-python",
     "langchain-openai"
+]
+
+mistral = [
+    "mistralai"
 ]
 
 [tool.hatch.build.targets.wheel]
