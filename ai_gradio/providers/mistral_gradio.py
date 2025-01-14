@@ -150,19 +150,33 @@ def generate_code(query, history, setting, api_key):
     messages.append({"role": "user", "content": query})
     
     try:
-        response = client.chat.complete(
+        # Create the streaming chat completion
+        stream_response = client.chat.stream(
             model="mistral-large-latest",
             messages=messages
         )
         
-        response_text = response.choices[0].message.content
+        response_text = ""
+        for chunk in stream_response:
+            if chunk.data.choices[0].delta.content is not None:
+                delta = chunk.data.choices[0].delta.content
+                response_text += delta
+                # Yield intermediate updates
+                yield (
+                    response_text,          # code_output (for markdown display)
+                    history,               # history state
+                    None,                  # preview HTML
+                    gr.update(active_key="loading"),  # state_tab
+                    gr.update(open=True)   # code_drawer
+                )
+        
+        # Clean the code and prepare final preview
+        clean_code = remove_code_block(response_text)
         new_history = history + [(query, response_text)]
         
-        # Clean the code and prepare preview
-        clean_code = remove_code_block(response_text)
-        
-        return (
-            response_text,          # code_output (for markdown display)
+        # Final yield with complete response
+        yield (
+            response_text,          # code_output
             new_history,           # history state
             send_to_preview(clean_code),  # preview HTML
             gr.update(active_key="render"),  # state_tab
@@ -171,7 +185,7 @@ def generate_code(query, history, setting, api_key):
         
     except Exception as e:
         print(f"Error generating code: {str(e)}")
-        return (
+        yield (
             f"Error: {str(e)}",
             history,
             None,
@@ -342,9 +356,10 @@ def registry(name: str, token: str | None = None, coder: bool = False, **kwargs)
 
             # Wire up event handlers
             btn.click(
-                lambda q, h, s: generate_code(q, h, s, api_key),
-                inputs=[input, history, setting],
-                outputs=[code_output, history, preview, state_tab, code_drawer]
+                generate_code,
+                inputs=[input, history, setting, gr.State(api_key)],
+                outputs=[code_output, history, preview, state_tab, code_drawer],
+                api_name=False
             )
             
             settingPromptBtn.click(lambda: gr.update(open=True), outputs=[system_prompt_modal])
