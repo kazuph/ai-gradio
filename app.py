@@ -2,9 +2,8 @@ import gradio as gr
 import ai_gradio
 
 demo = gr.load(
-    "mistral:codestral-latest",  
+    "browser:gpt-4o-2024-11-20",  
     src=ai_gradio.registry,
-    coder=True
 )
 
 demo.launch()
