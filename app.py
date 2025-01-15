@@ -2,7 +2,7 @@ import gradio as gr
 import ai_gradio
 
 demo = gr.load(
-    "browser:gpt-4o-2024-11-20",  
+    "nvidia:nvidia/llama3-chatqa-1.5-70b",  
     src=ai_gradio.registry,
 )
 

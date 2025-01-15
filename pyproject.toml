@@ -122,6 +122,10 @@ mistral = [
     "mistralai"
 ]
 
+nvidia = [
+    "openai>=1.58.1"
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
 
