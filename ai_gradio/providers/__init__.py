@@ -414,6 +414,14 @@ try:
 except ImportError:
     pass
 
+try:
+    from .minimax_gradio import registry as minimax_registry
+    registry.update({f"minimax:{k}": minimax_registry for k in [
+        "MiniMax-Text-01",
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"

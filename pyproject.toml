@@ -96,7 +96,8 @@ all = [
     "langchain-openai>=0.0.2",
     "langchain-community>=0.0.10",
     "langchain-core>=0.1.0",
-    "tavily-python>=0.3.0"
+    "tavily-python>=0.3.0",
+    "requests>=2.31.0"
 ]
 groq = ["groq>=0.3.0"]
 fireworks = ["openai>=1.58.1"]
@@ -125,6 +126,8 @@ mistral = [
 nvidia = [
     "openai>=1.58.1"
 ]
+
+minimax = ["requests>=2.31.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]

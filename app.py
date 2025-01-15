@@ -2,8 +2,7 @@ import gradio as gr
 import ai_gradio
 
 demo = gr.load(
-    "nvidia:nvidia/llama3-chatqa-1.5-70b",  
-    src=ai_gradio.registry,
+    name='minimax:MiniMax-Text-01',
+    src=ai_gradio.registry
 )
-
 demo.launch()
