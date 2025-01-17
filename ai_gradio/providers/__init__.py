@@ -410,6 +410,7 @@ try:
         "deepseek-ai/deepseek-coder-6.7b-instruct",
         "upstage/solar-10.7b-instruct",
         "snowflake/arctic",
+        "qwen/qwen2.5-7b-instruct"
     ]})
 except ImportError:
     pass
