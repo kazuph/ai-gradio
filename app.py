@@ -1,8 +1,7 @@
 import gradio as gr
 import ai_gradio
 
-demo = gr.load(
-    name='nvidia:nvidia/llama3-chatqa-1.5-70b',
+gr.load(
+    name='nvidia:nvidia/cosmos-nemotron-34b',
     src=ai_gradio.registry,
-)
-demo.launch()
+).launch()

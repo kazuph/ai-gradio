@@ -210,9 +210,13 @@ def get_interface_args(pipeline, model_name):
         def preprocess(message, history):
             messages = []
             for user_msg, assistant_msg in history:
-                messages.append({"role": "user", "content": user_msg})
-                messages.append({"role": "assistant", "content": assistant_msg})
-            messages.append({"role": "user", "content": message})
+                messages.append({"role": "user", "content": str(user_msg)})
+                messages.append({"role": "assistant", "content": str(assistant_msg)})
+            
+            # Handle both string and dictionary message formats
+            if isinstance(message, dict):
+                message = message.get('text', '')
+            messages.append({"role": "user", "content": str(message)})
             return {"messages": messages}
 
         postprocess = lambda x: x  # No post-processing needed
@@ -256,7 +260,7 @@ def registry(name: str, token: str | None = None, **kwargs):
             )
             interface = gr.ChatInterface(fn=fn, **kwargs)
         else:
-            interface = gr.ChatInterface(fn=fn, **kwargs)
+            interface = gr.ChatInterface(fn=fn, multimodal=True, **kwargs)
     else:
         interface = gr.Interface(fn=fn, inputs=inputs, outputs=outputs, **kwargs)
 
