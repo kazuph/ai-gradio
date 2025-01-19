@@ -423,6 +423,14 @@ try:
 except ImportError:
     pass
 
+try:
+    from .kokoro_gradio import registry as kokoro_registry
+    registry.update({f"kokoro:{k}": kokoro_registry for k in [
+        "kokoro-v0_19"
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"

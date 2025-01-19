@@ -1,7 +1,8 @@
 import gradio as gr
 import ai_gradio
 
+
 gr.load(
-    name='nvidia:nvidia/cosmos-nemotron-34b',
+    name='kokoro:kokoro-v0_19',
     src=ai_gradio.registry,
 ).launch()
