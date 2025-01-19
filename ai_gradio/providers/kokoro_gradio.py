@@ -8,16 +8,22 @@ from huggingface_hub import hf_hub_download
 __version__ = "0.0.1"
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable):
-    # Download model from HuggingFace Hub
+    # Download model and voices.json from HuggingFace Hub
     model_path = hf_hub_download(
         repo_id="hexgrad/Kokoro-82M",
         filename="kokoro-v0_19.onnx",
         repo_type="model"
     )
+    
+    voices_path = hf_hub_download(
+        repo_id="akhaliq/Kokoro-82M",
+        filename="voices.json",
+        repo_type="model"
+    )
 
     def chat_response(message, history, voice="af_sarah", speed=1.0, lang="en-us"):
         try:
-            kokoro = Kokoro(model_path, "voices.json")
+            kokoro = Kokoro(model_path, voices_path)
             samples, sample_rate = kokoro.create(
                 text=message,
                 voice=voice,

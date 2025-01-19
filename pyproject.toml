@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.2.19"
+version = "0.2.20"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -75,9 +75,9 @@ swarms = [
     "pydantic>=2.0.0,<3.0.0"
 ]
 kokoro = [
-    "kokoro-onnx>=0.1.0",
-    "soundfile>=0.12.0",
-    "huggingface-hub>=0.20.0"
+    "kokoro-onnx>=0.3.3",
+    "soundfile>=0.13.0",
+    "huggingface-hub>=0.27.1"
 ]
 all = [
     "openai>=1.58.1",
