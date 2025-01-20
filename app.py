@@ -3,6 +3,6 @@ import ai_gradio
 
 
 gr.load(
-    name='kokoro:kokoro-v0_19',
+    name='deepseek:deepseek-reasoner',
     src=ai_gradio.registry,
 ).launch()

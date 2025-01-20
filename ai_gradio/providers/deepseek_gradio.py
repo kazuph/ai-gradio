@@ -20,15 +20,19 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
         )
         try:
             completion = client.chat.completions.create(
-                model="deepseek-chat",
+                model=model_name,
                 messages=inputs["messages"],
                 stream=True,
             )
             response_text = ""
+            reasoning_text = ""
             for chunk in completion:
-                delta = chunk.choices[0].delta.content or ""
-                response_text += delta
-                yield postprocess(response_text)
+                if chunk.choices[0].delta.reasoning_content:
+                    reasoning_text += chunk.choices[0].delta.reasoning_content
+                else:
+                    delta = chunk.choices[0].delta.content or ""
+                    response_text += delta
+                yield postprocess(response_text, reasoning_text)
         except Exception as e:
             error_message = f"Error: {str(e)}"
             return error_message
@@ -63,26 +67,33 @@ def handle_user_msg(message: str):
 def get_interface_args(pipeline):
     if pipeline == "chat":
         inputs = None
-        outputs = None
+        outputs = [
+            gr.Textbox(label="Chain of Thought", lines=10, visible=True),
+            gr.Textbox(label="Response")
+        ]
 
         def preprocess(message, history):           
             messages = []
             files = None
             for user_msg, assistant_msg in history:
                 if assistant_msg is not None:
+                    if isinstance(assistant_msg, dict):
+                        assistant_msg = assistant_msg["visible"][1]  # Get the response text
                     messages.append({"role": "user", "content": handle_user_msg(user_msg)})
                     messages.append({"role": "assistant", "content": assistant_msg})
                 else:
                     files = user_msg
             if type(message) is str and files is not None:
-                message = {"text":message, "files":files}
+                message = {"text": message, "files": files}
             elif type(message) is dict and files is not None:
                 if message["files"] is None or len(message["files"]) == 0:
                     message["files"] = files
             messages.append({"role": "user", "content": handle_user_msg(message)})
             return {"messages": messages}
 
-        postprocess = lambda x: x  # No post-processing needed
+        def postprocess(response, reasoning=None):
+            # Update both textboxes but return only the response for the chat history
+            return response
     else:
         # Add other pipeline types when they will be needed
         raise ValueError(f"Unsupported pipeline type: {pipeline}")
@@ -90,8 +101,9 @@ def get_interface_args(pipeline):
 
 
 def get_pipeline(model_name):
-    # Determine the pipeline type based on the model name
-    # For simplicity, assuming all models are chat models at the moment
+    if model_name == "deepseek-reasoner":
+        return "chat"
+    # For other models, assume chat pipeline
     return "chat"
 
 

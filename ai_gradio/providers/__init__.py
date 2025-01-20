@@ -239,7 +239,8 @@ try:
     registry.update({f"deepseek:{k}": deepseek_registry for k in [
         'deepseek-chat',
         'deepseek-coder',
-        'deepseek-vision'
+        'deepseek-vision',
+        'deepseek-reasoner'
     ]})
 except ImportError:
     pass
