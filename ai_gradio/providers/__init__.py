@@ -432,6 +432,15 @@ try:
 except ImportError:
     pass
 
+try:
+    from .perplexity_gradio import registry as perplexity_registry
+    registry.update({f"perplexity:{k}": perplexity_registry for k in [
+        'sonar-pro',
+        'sonar'
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -450,6 +459,11 @@ if not registry:
         "pip install 'ai-gradio[smolagents]' for SmolaAgents support\n"
         "pip install 'ai-gradio[jupyter]' for Jupyter support\n"
         "pip install 'ai-gradio[langchain]' for LangChain support\n"
+        "pip install 'ai-gradio[mistral]' for Mistral support\n"
+        "pip install 'ai-gradio[nvidia]' for NVIDIA support\n"
+        "pip install 'ai-gradio[minimax]' for MiniMax support\n"
+        "pip install 'ai-gradio[kokoro]' for Kokoro support\n"
+        "pip install 'ai-gradio[perplexity]' for Perplexity support\n"
         "pip install 'ai-gradio[all]' for all providers\n"
         "pip install 'ai-gradio[swarms]' for Swarms support"
     )
