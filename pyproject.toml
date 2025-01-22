@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.2.22"
+version = "0.2.24"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -136,6 +136,10 @@ nvidia = [
 ]
 
 minimax = ["requests>=2.31.0"]
+
+perplexity = [
+    "openai>=1.58.1"
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
