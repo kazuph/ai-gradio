@@ -3,6 +3,7 @@ import ai_gradio
 
 
 gr.load(
-    name='perplexity:sonar-pro',
+    name='gemini:gemini-2.0-flash-thinking-exp-01-21',
     src=ai_gradio.registry,
+    coder=True
 ).launch()
