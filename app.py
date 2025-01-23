@@ -4,5 +4,6 @@ import ai_gradio
 
 gr.load(
     name='perplexity:sonar-pro',
-    src=ai_gradio.registry
+    src=ai_gradio.registry,
+    coder=True
 ).launch()
