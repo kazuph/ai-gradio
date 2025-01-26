@@ -3,7 +3,6 @@ import ai_gradio
 
 
 gr.load(
-    name='perplexity:sonar-pro',
-    src=ai_gradio.registry,
-    coder=True
+    name='qwen:qwen2.5-14b-instruct-1m',
+    src=ai_gradio.registry
 ).launch()

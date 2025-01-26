@@ -164,7 +164,10 @@ try:
         "qwen1.5-14b-chat",
         "qwen1.5-7b-chat",
         "qwq-32b-preview",
-        'qvq-72b-preview'
+        'qvq-72b-preview',
+        'qwen2.5-14b-instruct-1m',
+        'qwen2.5-7b-instruct-1m',
+        'Qwen/Qwen2.5-14B-Instruct-1M'
     ]})
 except ImportError:
     pass
