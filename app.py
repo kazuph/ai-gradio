@@ -4,5 +4,6 @@ import ai_gradio
 
 gr.load(
     name='qwen:qwen2.5-14b-instruct-1m',
-    src=ai_gradio.registry
+    src=ai_gradio.registry,
+    coder=True
 ).launch()

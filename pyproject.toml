@@ -61,7 +61,10 @@ xai = ["openai>=1.58.1"]
 cohere = ["cohere>=5.0.0"]
 sambanova = ["openai>=1.58.1"]
 hyperbolic = ["openai>=1.58.1"]
-qwen = ["openai>=1.58.1"]
+qwen = [
+    "openai>=1.58.1",
+    "vllm @ git+https://github.com/QwenLM/vllm.git@dev/dual-chunk-attn"
+]
 browser = [
     "browser-use>=0.1.16",
     "playwright>=1.49.1"
@@ -140,6 +143,9 @@ minimax = ["requests>=2.31.0"]
 perplexity = [
     "openai>=1.58.1"
 ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
