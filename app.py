@@ -3,7 +3,7 @@ import ai_gradio
 
 
 gr.load(
-    name='qwen:qwen2.5-14b-instruct-1m',
+    name='groq:deepseek-r1-distill-llama-70b',
     src=ai_gradio.registry,
     coder=True
 ).launch()

@@ -1,5 +1,5 @@
 import os
-from groq import Groq
+from openai import OpenAI
 import gradio as gr
 from typing import Callable
 import base64
@@ -100,64 +100,38 @@ def handle_user_msg(message: str):
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str, multimodal: bool = False):
     def fn(message, history):
-        inputs = preprocess(message, history)
-        client = Groq(api_key=api_key)
-        
-        # Format messages for Groq
-        messages = []
-        current_model = model_name  # Store the original model name
-        
-        for msg in inputs["messages"]:
-            if isinstance(msg["content"], list):
-                # Already in the correct format for multimodal
-                messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
-            elif isinstance(msg["content"], dict):
-                # Convert to list format
-                content_parts = []
-                if "text" in msg["content"]:
-                    content_parts.append({
-                        "type": "text",
-                        "text": msg["content"]["text"]
-                    })
-                if "image_url" in msg["content"]:
-                    content_parts.append({
-                        "type": "image_url",
-                        "image_url": msg["content"]["image_url"]
-                    })
-                messages.append({
-                    "role": msg["role"],
-                    "content": content_parts
-                })
-            else:
-                # Plain text message
-                messages.append({
-                    "role": msg["role"],
-                    "content": [{"type": "text", "text": str(msg["content"])}]
-                })
-        
-        # Use vision model if message contains images
-        has_images = any(
-            isinstance(msg["content"], list) and 
-            any(part.get("type") == "image_url" for part in msg["content"])
-            for msg in messages
-        )
-        if has_images:
-            current_model = "llama-3.2-11b-vision-preview"
-        
-        completion = client.chat.completions.create(
-            model=current_model,  # Use the current_model instead of model_name
-            messages=messages,
-            stream=True,
-        )
-        
-        response_text = ""
-        for chunk in completion:
-            delta = chunk.choices[0].delta.content or ""
-            response_text += delta
-            yield postprocess(response_text)
+        try:
+            inputs = preprocess(message, history)
+            client = OpenAI(
+                base_url="https://api.groq.com/openai/v1",
+                api_key=api_key
+            )
+            
+            completion = client.chat.completions.create(
+                model=model_name,
+                messages=inputs["messages"],
+                temperature=0.6,
+                max_tokens=4096,  # Changed from max_completion_tokens to max_tokens
+                top_p=0.95,
+                stream=True,
+                n=1,  # Explicitly set to 1 as per Groq's requirements
+            )
+            
+            # Stream response
+            response_text = ""
+            for chunk in completion:
+                if hasattr(chunk.choices[0].delta, 'content'):
+                    if chunk.choices[0].delta.content is not None:
+                        response_text += chunk.choices[0].delta.content
+                        yield postprocess(response_text)
+            
+            # If no response was generated, yield a default message
+            if not response_text:
+                yield postprocess("I apologize, but I wasn't able to generate a response. Please try again.")
+
+        except Exception as e:
+            print(f"Error in chat completion: {str(e)}")
+            yield f"An error occurred: {str(e)}"
 
     return fn
 
@@ -439,11 +413,18 @@ def generate_code(prompt: str, setting: dict, history: list) -> tuple:
     messages.append({"role": "user", "content": prompt})
     
     # Call Groq API
-    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    client = OpenAI(
+        base_url="https://api.groq.com/openai/v1",
+        api_key=os.environ.get("GROQ_API_KEY")
+    )
     completion = client.chat.completions.create(
         model=setting["model"],
         messages=messages,
-        stream=True
+        temperature=0.6,
+        max_tokens=4096,
+        top_p=0.95,
+        stream=True,
+        n=1,
     )
     
     # Stream the response

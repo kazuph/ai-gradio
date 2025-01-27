@@ -274,7 +274,8 @@ try:
         "gemma2-9b-it",
         "gemma-7b-it",
         "llama-3.3-70b-versatile",
-        "llama-3.3-70b-specdec"
+        "llama-3.3-70b-specdec",
+        "deepseek-r1-distill-llama-70b"
     ]})
 except ImportError:
     pass
