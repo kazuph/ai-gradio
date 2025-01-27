@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-gradio"
-version = "0.2.27"
+version = "0.2.28"
 description = "A Python package for creating Gradio applications with AI models"
 authors = [
     { name = "AK", email = "ahsen.khaliq@gmail.com" }
@@ -63,7 +63,6 @@ sambanova = ["openai>=1.58.1"]
 hyperbolic = ["openai>=1.58.1"]
 qwen = [
     "openai>=1.58.1",
-    "vllm @ git+https://github.com/QwenLM/vllm.git@dev/dual-chunk-attn"
 ]
 browser = [
     "browser-use>=0.1.16",
@@ -144,8 +143,7 @@ perplexity = [
     "openai>=1.58.1"
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
