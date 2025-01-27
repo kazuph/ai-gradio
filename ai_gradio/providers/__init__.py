@@ -146,7 +146,9 @@ try:
         'meta-llama/Meta-Llama-3.1-405B-Instruct',
         'Qwen/QwQ-32B-Preview',
         'meta-llama/Llama-3.3-70B-Instruct',
-        'deepseek-ai/DeepSeek-V3'
+        'deepseek-ai/DeepSeek-V3',
+        'deepseek-ai/DeepSeek-R1',
+        'deepseek-ai/DeepSeek-R1-Zero'
     ]})
 except ImportError:
     pass
