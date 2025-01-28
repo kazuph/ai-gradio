@@ -3,7 +3,6 @@ import ai_gradio
 
 
 gr.load(
-    name='hyperbolic:deepseek-ai/DeepSeek-R1-Zero',
+    name='qwen:qwen-max-0125',
     src=ai_gradio.registry,
-    coder=True
 ).launch()

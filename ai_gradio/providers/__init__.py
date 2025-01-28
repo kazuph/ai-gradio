@@ -169,7 +169,7 @@ try:
         'qvq-72b-preview',
         'qwen2.5-14b-instruct-1m',
         'qwen2.5-7b-instruct-1m',
-        'Qwen/Qwen2.5-14B-Instruct-1M'
+        'qwen-max-0125'
     ]})
 except ImportError:
     pass
