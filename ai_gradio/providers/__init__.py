@@ -444,7 +444,8 @@ try:
     from .perplexity_gradio import registry as perplexity_registry
     registry.update({f"perplexity:{k}": perplexity_registry for k in [
         'sonar-pro',
-        'sonar'
+        'sonar',
+        'sonar-reasoning'
     ]})
 except ImportError:
     pass
