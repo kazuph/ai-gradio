@@ -3,6 +3,6 @@ import ai_gradio
 
 
 gr.load(
-    name='qwen:qwen-max-0125',
+    name='together:deepseek-ai/DeepSeek-R1',
     src=ai_gradio.registry,
 ).launch()

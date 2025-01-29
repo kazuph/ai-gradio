@@ -1,6 +1,6 @@
 import os
 import base64
-from openai import OpenAI
+from huggingface_hub import InferenceClient
 import gradio as gr
 from typing import Callable
 
@@ -14,8 +14,8 @@ def get_image_base64(url: str, ext: str):
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str):
     def fn(message, history):
         inputs = preprocess(message, history)
-        client = OpenAI(
-            base_url="https://api.together.xyz/v1",
+        client = InferenceClient(
+            provider="together",
             api_key=api_key,
         )
         try:
@@ -103,9 +103,9 @@ def registry(name: str, token: str | None = None, **kwargs):
         - name (str): The name of the model on Together.
         - token (str, optional): The API key for Together.
     """
-    api_key = token or os.environ.get("TOGETHER_API_KEY")
+    api_key = token or os.environ.get("HF_TOKEN")
     if not api_key:
-        raise ValueError("TOGETHER_API_KEY environment variable is not set.")
+        raise ValueError("HF_TOKEN environment variable is not set.")
 
     pipeline = get_pipeline(name)
     inputs, outputs, preprocess, postprocess = get_interface_args(pipeline)
