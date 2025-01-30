@@ -452,6 +452,14 @@ try:
 except ImportError:
     pass
 
+try:
+    from .cerebras_gradio import registry as cerebras_registry
+    registry.update({f"cerebras:{k}": cerebras_registry for k in [
+        'deepseek-r1-distill-llama-70b',
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -475,6 +483,7 @@ if not registry:
         "pip install 'ai-gradio[minimax]' for MiniMax support\n"
         "pip install 'ai-gradio[kokoro]' for Kokoro support\n"
         "pip install 'ai-gradio[perplexity]' for Perplexity support\n"
+        "pip install 'ai-gradio[cerebras]' for Cerebras support\n"
         "pip install 'ai-gradio[all]' for all providers\n"
         "pip install 'ai-gradio[swarms]' for Swarms support"
     )

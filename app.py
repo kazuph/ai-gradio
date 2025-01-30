@@ -3,6 +3,6 @@ import ai_gradio
 
 
 gr.load(
-    name='together:mistralai/Mistral-Small-24B-Instruct-2501',
+    name='hyperbolic:deepseek-ai/DeepSeek-R1',
     src=ai_gradio.registry,
 ).launch()
