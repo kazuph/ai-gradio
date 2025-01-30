@@ -237,7 +237,8 @@ try:
         'togethercomputer/StripedHyena-Nous-7B',
         'upstage/SOLAR-10.7B-Instruct-v1.0',
         'deepseek-ai/DeepSeek-V3',
-        'deepseek-ai/DeepSeek-R1'
+        'deepseek-ai/DeepSeek-R1',
+        'mistralai/Mistral-Small-24B-Instruct-2501'
     ]})
 except ImportError:
     pass
