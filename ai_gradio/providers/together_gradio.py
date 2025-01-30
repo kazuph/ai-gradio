@@ -13,23 +13,30 @@ def get_image_base64(url: str, ext: str):
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str):
     def fn(message, history):
-        # Convert history to the format expected by the model
         inputs = preprocess(message, history)
         client = InferenceClient(
             provider="together",
-            api_key=api_key,
+            token=api_key
         )
         try:
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=inputs["messages"],
-                stream=False,
+                stream=True,
+                max_tokens=1000
             )
-            response = completion.choices[0].message.content
-            return postprocess(response)
+            
+            partial_message = ""
+            for chunk in completion:
+                if chunk.choices:
+                    delta = chunk.choices[0].delta.content or ""
+                    delta = delta.replace("<think>", "[think]").replace("</think>", "[/think]")
+                    partial_message += delta
+                    yield postprocess(partial_message)
+                        
         except Exception as e:
             error_message = f"Error: {str(e)}"
-            return error_message
+            yield error_message
 
     return fn
 
@@ -65,26 +72,18 @@ def get_interface_args(pipeline):
 
         def preprocess(message, history):           
             messages = []
-            files = None
             # Process history first
             for user_msg, assistant_msg in history:
-                if user_msg is not None:
-                    messages.append({"role": "user", "content": handle_user_msg(user_msg)})
+                messages.append({"role": "user", "content": str(user_msg)})
                 if assistant_msg is not None:
-                    messages.append({"role": "assistant", "content": assistant_msg})
+                    messages.append({"role": "assistant", "content": str(assistant_msg)})
             
-            # Process current message
-            if type(message) is str and files is not None:
-                message = {"text": message, "files": files}
-            elif type(message) is dict and files is not None:
-                if message["files"] is None or len(message["files"]) == 0:
-                    message["files"] = files
-            messages.append({"role": "user", "content": handle_user_msg(message)})
+            # Add current message
+            messages.append({"role": "user", "content": str(message)})
             return {"messages": messages}
 
         postprocess = lambda x: x  # No post-processing needed
     else:
-        # Add other pipeline types when they will be needed
         raise ValueError(f"Unsupported pipeline type: {pipeline}")
     return inputs, outputs, preprocess, postprocess
 
