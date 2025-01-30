@@ -3,7 +3,6 @@ import ai_gradio
 
 
 gr.load(
-    name='perplexity:sonar-reasoning',
+    name='together:deepseek-ai/DeepSeek-R1',
     src=ai_gradio.registry,
-    coder=True
 ).launch()

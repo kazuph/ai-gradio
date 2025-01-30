@@ -13,6 +13,7 @@ def get_image_base64(url: str, ext: str):
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str):
     def fn(message, history):
+        # Convert history to the format expected by the model
         inputs = preprocess(message, history)
         client = InferenceClient(
             provider="together",
@@ -22,13 +23,10 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=inputs["messages"],
-                stream=True,
+                stream=False,
             )
-            response_text = ""
-            for chunk in completion:
-                delta = chunk.choices[0].delta.content or ""
-                response_text += delta
-                yield postprocess(response_text)
+            response = completion.choices[0].message.content
+            return postprocess(response)
         except Exception as e:
             error_message = f"Error: {str(e)}"
             return error_message
@@ -68,14 +66,16 @@ def get_interface_args(pipeline):
         def preprocess(message, history):           
             messages = []
             files = None
+            # Process history first
             for user_msg, assistant_msg in history:
-                if assistant_msg is not None:
+                if user_msg is not None:
                     messages.append({"role": "user", "content": handle_user_msg(user_msg)})
+                if assistant_msg is not None:
                     messages.append({"role": "assistant", "content": assistant_msg})
-                else:
-                    files = user_msg
+            
+            # Process current message
             if type(message) is str and files is not None:
-                message = {"text":message, "files":files}
+                message = {"text": message, "files": files}
             elif type(message) is dict and files is not None:
                 if message["files"] is None or len(message["files"]) == 0:
                     message["files"] = files
