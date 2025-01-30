@@ -39,8 +39,7 @@ DEMO_LIST = [
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str, base_url: str = None):
     def fn(message, history):
         inputs = preprocess(message, history)
-        # Set base URL and adjust endpoint handling
-      
+        
         client = OpenAI(
             api_key=api_key,
             base_url="https://api.hyperbolic.xyz/v1"
@@ -59,6 +58,9 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
         response_text = ""
         for chunk in completion:
             delta = chunk.choices[0].delta.content or ""
+            # Replace DeepSeek-R1 special tokens
+            if "deepseek" in model_name.lower():
+                delta = delta.replace("<think>", "[think]").replace("</think>", "[/think]")
             response_text += delta
             yield postprocess(response_text)
 
