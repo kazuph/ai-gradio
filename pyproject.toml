@@ -143,7 +143,9 @@ perplexity = [
     "openai>=1.58.1"
 ]
 
-
+replicate = [
+    "replicate"
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]

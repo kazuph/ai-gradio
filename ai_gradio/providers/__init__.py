@@ -461,6 +461,32 @@ try:
 except ImportError:
     pass
 
+try:
+    from .replicate_gradio import registry as replicate_registry
+    registry.update({f"replicate:{k}": replicate_registry for k in [
+        # Text to Image Models
+        "stability-ai/sdxl",
+        "black-forest-labs/flux-pro",
+        "stability-ai/stable-diffusion",
+        
+        # Control Net Models
+        "black-forest-labs/flux-depth-pro",
+        "black-forest-labs/flux-canny-pro",
+        "black-forest-labs/flux-depth-dev",
+        
+        # Inpainting Models
+        "black-forest-labs/flux-fill-pro",
+        "stability-ai/stable-diffusion-inpainting",
+        
+        # Text to Video Models
+        "tencent/hunyuan-video:140176772be3b423d14fdaf5403e6d4e38b85646ccad0c3fd2ed07c211f0cad1",
+        
+        # Text Generation Models
+        "deepseek-ai/deepseek-r1"
+    ]})
+except ImportError:
+    pass
+
 if not registry:
     raise ImportError(
         "No providers installed. Install with either:\n"
@@ -485,6 +511,7 @@ if not registry:
         "pip install 'ai-gradio[kokoro]' for Kokoro support\n"
         "pip install 'ai-gradio[perplexity]' for Perplexity support\n"
         "pip install 'ai-gradio[cerebras]' for Cerebras support\n"
+        "pip install 'ai-gradio[replicate]' for Replicate support\n"
         "pip install 'ai-gradio[all]' for all providers\n"
         "pip install 'ai-gradio[swarms]' for Swarms support"
     )
