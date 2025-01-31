@@ -219,10 +219,14 @@ def get_interface_args(pipeline, model_name):
             messages.append({"role": "user", "content": str(message)})
             return {"messages": messages}
 
-        postprocess = lambda x: x  # No post-processing needed
+        def postprocess(x):
+            # Replace DeepSeek special tokens with brackets
+            return (x.replace("<think>", "[think]")
+                    .replace("</think>", "[/think]"))
+
+        return inputs, outputs, preprocess, postprocess
     else:
         raise ValueError(f"Unsupported pipeline type: {pipeline}")
-    return inputs, outputs, preprocess, postprocess
 
 
 def get_pipeline(model_name):

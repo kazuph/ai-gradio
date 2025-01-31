@@ -3,6 +3,6 @@ import ai_gradio
 
 
 gr.load(
-    name='hyperbolic:deepseek-ai/DeepSeek-R1',
+    name='nvidia:nvidia/llama3-chatqa-1.5-70b',
     src=ai_gradio.registry,
 ).launch()
