@@ -49,6 +49,7 @@ try:
         "gpt-4o-realtime-preview-2024-12-17",
         "gpt-4o-mini-realtime-preview",
         "gpt-4o-mini-realtime-preview-2024-12-17",
+        "o3-mini-2025-01-31"
     ]})
 except ImportError:
     pass

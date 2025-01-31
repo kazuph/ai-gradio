@@ -3,6 +3,6 @@ import ai_gradio
 
 
 gr.load(
-    name='replicate:deepseek-ai/deepseek-r1',
+    name='openai:gpt-4o',
     src=ai_gradio.registry,
 ).launch()

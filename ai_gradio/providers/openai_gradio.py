@@ -504,12 +504,21 @@ def generate_code(query, image, setting, history, model):
     # Add the content to messages
     messages.append({"role": "user", "content": content if image else query})
     
-    response = client.chat.completions.create(
-        model=model_to_use,
-        messages=messages,
-        max_tokens=4096,
-        stream=True
-    )
+    # Create completion with the correct parameter name
+    completion_params = {
+        "model": model_to_use,
+        "messages": messages,
+        "stream": True
+    }
+    
+    # Add specific parameters for o3-mini model
+    if "o3-mini" in model_to_use:
+        completion_params.update({
+            "response_format": {"type": "text"},
+            "reasoning_effort": "medium"
+        })
+    
+    response = client.chat.completions.create(**completion_params)
     
     response_text = ""
     for chunk in response:
