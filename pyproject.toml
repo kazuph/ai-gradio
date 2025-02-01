@@ -20,7 +20,7 @@ dependencies = [
     "torch>=2.0.0",
     "numpy",
     "accelerate>=0.27.0",
-    "bitsandbytes>=0.41.0",
+    "bitsandbytes>=0.41.0; sys_platform != 'darwin'",
     "gradio>=5.9.1",
     "gradio-webrtc",
     "websockets",
@@ -51,11 +51,12 @@ openai = ["openai>=1.58.1"]
 gemini = ["google-generativeai>=0.8.3", "google-genai==0.3.0"]
 crewai = [
     "crewai>=0.1.0",
-    "langchain>=0.1.0",
     "langchain-openai>=0.0.2",
     "crewai-tools>=0.0.1"
 ]
-anthropic = ["anthropic>=1.0.0"]
+anthropic = [
+    "anthropic==0.45.2"
+]
 lumaai = ["lumaai>=0.0.3"]
 xai = ["openai>=1.58.1"]
 cohere = ["cohere>=5.0.0"]
@@ -63,18 +64,6 @@ sambanova = ["openai>=1.58.1"]
 hyperbolic = ["openai>=1.58.1"]
 qwen = [
     "openai>=1.58.1",
-]
-browser = [
-    "browser-use>=0.1.16",
-    "playwright>=1.49.1"
-]
-swarms = [
-    "swarms>=6.8.9,<7.0.0",
-    "swarm-models>=0.3.0,<0.4.0",
-    "swarms-memory>=0.1.2,<0.2.0",
-    "langchain>=0.1.0",
-    "langchain-community>=0.0.10",
-    "pydantic>=2.0.0,<3.0.0"
 ]
 kokoro = [
     "kokoro-onnx>=0.3.3",
@@ -85,20 +74,15 @@ all = [
     "openai>=1.58.1",
     "google-generativeai",
     "crewai>=0.1.0",
-    "langchain>=0.1.0",
+    "langchain>=0.3.9",
     "langchain-openai>=0.0.2",
-    "crewai-tools>=0.0.1",
-    "anthropic>=1.0.0",
+    "langchain-community>=0.0.10",
+    "anthropic<=0.45.2",
     "lumaai>=0.0.3",
     "cohere>=5.0.0",
     "sambanova>=0.0.1",
     "hyperbolic>=1.58.1",
     "groq>=0.3.0",
-    "browser-use>=0.1.0",
-    "swarms>=6.8.9,<7.0.0",
-    "swarm-models>=0.3.0,<0.4.0",
-    "swarms-memory>=0.1.2,<0.2.0",
-    "langchain>=0.1.0",
     "pydantic>=2.0.0,<3.0.0",
     "langchain-openai>=0.0.2",
     "langchain-community>=0.0.10",
