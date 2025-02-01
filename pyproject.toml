@@ -134,3 +134,6 @@ replicate = [
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
 
+[tool.poetry.dependencies]
+python-dotenv = "^1.0.0"
+

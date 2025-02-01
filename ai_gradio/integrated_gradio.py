@@ -17,16 +17,20 @@ from ai_gradio.logging_config import setup_logging
 # ロガーの初期化
 logger = setup_logging()
 
+# 既存のインポートに追加
+from dotenv import load_dotenv
+load_dotenv()  # 追加: .envファイルから環境変数をグローバルに読み込みます
+
 # 定数: 各provider:モデル名のリスト (OpenAIは gpt-4o, gpt-4o-mini, o3-mini のみ)
 INTEGRATED_MODELS = [
     "openai:o3-mini",
     "openai:gpt-4o-mini", 
     "openai:gpt-4o", 
     "anthropic:claude-3-5-sonnet-20241022", 
-    "anthropic:claude-3-opus-20240229",
-    "gemini:gemini-1.5-pro", 
     "gemini:gemini-2.0-flash-exp",
-    "gemini:gemini-2.0-exp",
+    "gemini:gemini-exp-1206",
+    "gemini:gemini-2.0-flash-thinking-exp",
+    "gemini:gemini-1.5-pro", 
     "deepseek:deepseek-r1",
 ]
 
@@ -114,6 +118,8 @@ def generate_anthropic(query, model):
 
 def generate_gemini(query, model):
     try:
+        load_dotenv()  # .envファイルを読み込み
+        
         api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY environment variable is not set.")
@@ -190,66 +196,130 @@ def remove_code_block(text):
         return match.group(1).strip()
     return text.strip()
 
-def send_to_preview(code):
+def send_to_preview(code, iframe_id=""):
     """HTMLプレビューを生成する"""
     # Clean the code and escape special characters for HTML
     clean_code = code.replace("```html", "").replace("```", "").strip()
     escaped_code = clean_code.replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+    id_attribute = f' id="{iframe_id}"' if iframe_id else ""
     return f'''
-        <iframe 
+        <iframe{id_attribute}
             srcdoc="<!DOCTYPE html><html><body>{escaped_code}</body></html>"
             width="100%" 
-            height="920px"
+            height="640px"
             sandbox="allow-scripts allow-same-origin"
         ></iframe>
     '''
 
-# 統合生成関数（並列実行の疑似実装）
+# 既存のimportに追加
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+# 非同期のLLM生成関数を更新
+async def async_generate_openai(query, model):
+    try:
+        # 同期的な generate_openai を asyncio.to_thread で実行し、並列化
+        return await asyncio.to_thread(generate_openai, query, model)
+    except Exception as e:
+        logger.error(f"Error in async OpenAI generation: {str(e)}")
+        return (f"Error in OpenAI: {str(e)}",
+                f"<div style='padding: 8px;color:red;'>Error in OpenAI: {str(e)}</div>")
+
+async def async_generate_anthropic(query, model):
+    try:
+        # 同期的な generate_anthropic を asyncio.to_thread で実行し、並列化
+        return await asyncio.to_thread(generate_anthropic, query, model)
+    except Exception as e:
+        logger.error(f"Error in async Anthropic generation: {str(e)}")
+        return (f"Error in Anthropic: {str(e)}",
+                f"<div style='padding: 8px;color:red;'>Error in Anthropic: {str(e)}</div>")
+
+async def async_generate_gemini(query, model):
+    try:
+        # 同期的な generate_gemini を asyncio.to_thread で実行し、並列化
+        return await asyncio.to_thread(generate_gemini, query, model)
+    except Exception as e:
+        logger.error(f"Error in async Gemini generation: {str(e)}")
+        return (f"Error in Gemini: {str(e)}",
+                f"<div style='padding: 8px;color:red;'>Error in Gemini: {str(e)}</div>")
+
+async def async_generate_deepseek(query, model):
+    try:
+        # 同期的な generate_deepseek を asyncio.to_thread で実行し、並列化
+        return await asyncio.to_thread(generate_deepseek, query, model)
+    except Exception as e:
+        logger.error(f"Error in async DeepSeek generation: {str(e)}")
+        return (f"Error in DeepSeek: {str(e)}",
+                f"<div style='padding: 8px;color:red;'>Error in DeepSeek: {str(e)}</div>")
+
+# 統合生成関数を非同期処理に更新
 def generate_parallel(query, selected_models):
     # リクエストのログ出力
     logger.info(f"Received generation request - Query: {query}")
     logger.info(f"Selected models: {selected_models}")
     
-    # 各モデルの生成結果を格納
-    results = []
-    for full_model in selected_models:
-        try:
-            provider, model = full_model.split(":")
-            logger.info(f"Generating code with {full_model}")
-            
-            if provider == "openai":
-                code, preview = generate_openai(query, model)
-            elif provider == "anthropic":
-                code, preview = generate_anthropic(query, model)
-            elif provider == "gemini":
-                code, preview = generate_gemini(query, model)
-            elif provider == "deepseek":
-                code, preview = generate_deepseek(query, model)
-            elif provider == "mistral":
-                logger.warning(f"Mistral implementation pending for {full_model}")
-                code, preview = f"// Mistral: API implementation pending for {full_model}", f"<div>Unknown provider for {full_model}</div>"
-            else:
-                logger.error(f"Unknown provider: {full_model}")
-                code, preview = f"// Unknown provider: {full_model}", f"<div>Unknown provider for {full_model}</div>"
-            
-            results.append((full_model, code, preview))
-            logger.info(f"Successfully generated code with {full_model}")
-            
-        except Exception as e:
-            logger.error(f"Error generating code with {full_model}: {str(e)}")
-            continue
+    async def run_parallel():
+        tasks = []
+        for full_model in selected_models:
+            try:
+                provider, model = full_model.split(":")
+                logger.info(f"Preparing task for {full_model}")
+                
+                if provider == "openai":
+                    task = async_generate_openai(query, model)
+                elif provider == "anthropic":
+                    task = async_generate_anthropic(query, model)
+                elif provider == "gemini":
+                    task = async_generate_gemini(query, model)
+                elif provider == "deepseek":
+                    task = async_generate_deepseek(query, model)
+                else:
+                    logger.error(f"Unknown provider: {full_model}")
+                    continue
+                
+                tasks.append((full_model, task))
+                
+            except Exception as e:
+                logger.error(f"Error preparing task for {full_model}: {str(e)}")
+                continue
+        
+        # 並列実行
+        results = []
+        if tasks:
+            # 非同期タスクを同時実行
+            completed_tasks = await asyncio.gather(*(task for _, task in tasks))
+            # 結果を整理
+            for (full_model, _), (code, preview) in zip(tasks, completed_tasks):
+                results.append((full_model, code, preview))
+        
+        return results
+
+    # asyncioのイベントループを取得または作成
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    # 非同期処理を実行
+    results = loop.run_until_complete(run_parallel())
     
     # 生成結果のグリッドHTMLを作成
     grid_html = """
     <style>
         .code-section {
             display: none;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 16px;
+            border-radius: 4px;
         }
         .code-toggle {
             cursor: pointer;
             padding: 4px 8px;
-            background: #eee;
-            border: 1px solid #ddd;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
             border-radius: 4px;
             display: inline-flex;
             align-items: center;
@@ -257,26 +327,77 @@ def generate_parallel(query, selected_models):
             font-size: 0.9em;
         }
         .code-toggle:hover {
-            background: #e0e0e0;
+            background: #444;
+        }
+        .reload-preview {
+            cursor: pointer;
+            padding: 4px 8px;
+            background: #007bff;
+            color: #fff;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-top: 8px;
+        }
+        .reload-preview:hover {
+            background: #0056b3;
+        }
+        pre {
+            margin: 0;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            background: #1e1e1e !important;
+            color: #d4d4d4 !important;
         }
         .code-icon {
             width: 16px;
             height: 16px;
             display: inline-block;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z'/%3E%3C/svg%3E");
-            filter: invert(1);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z'/%3E%3C/svg%3E");
         }
+        .results-container {
+            width: 100vw;
+            max-width: 100vw;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 20px;
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+        .results-grid {
+            display: inline-flex;
+            gap: 24px;
+        }
+        .result-card {
+            width: 1200px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        /* シンタックスハイライト用の色設定 */
+        pre .keyword { color: #569cd6 !important; }
+        pre .string { color: #ce9178 !important; }
+        pre .comment { color: #6a9955 !important; }
+        pre .function { color: #dcdcaa !important; }
+        pre .number { color: #b5cea8 !important; }
+        pre .operator { color: #d4d4d4 !important; }
+        pre .punctuation { color: #d4d4d4 !important; }
     </style>
-    <div style='height: 100vh; overflow-y: auto; padding: 20px;'>
-        <div style='display: grid; grid-template-columns: repeat(1, 1fr); gap: 24px;'>
+    <div class='results-container'>
+        <div class='results-grid'>
     """
     
     for full_model, code, preview in results:
         provider, model_name = full_model.split(":")
         model_id = f"model_{provider}_{model_name}".replace("-", "_")
         
+        # 各結果ごとにプレビューiframeを再生成し、固有のiframe idを付与
+        preview_component = send_to_preview(code, iframe_id=f"{model_id}_preview")
+        
         grid_html += f"""
-            <div style='border: 1px solid #ccc; border-radius: 8px; overflow: hidden;'>
+            <div class='result-card'>
                 <div style='background: #333; color: #fff; padding: 12px; border-bottom: 1px solid #ccc;'>
                     <div style='font-size: 1.2em; margin-bottom: 4px;'>
                         <strong>Provider:</strong> {provider.upper()}
@@ -291,14 +412,15 @@ def generate_parallel(query, selected_models):
                     </div>
                 </div>
                 <div style='display: flex; flex-direction: column;'>
-                    <div id='{model_id}_code' class='code-section' style='flex: 1; padding: 16px; border-bottom: 1px solid #eee;'>
-                        <div style='font-weight: bold; margin-bottom: 8px;'>Generated Code:</div>
-                        <pre style='margin:0; background: #f8f8f8; padding: 12px; border-radius: 4px; overflow-x: auto;'>{code}</pre>
+                    <div id='{model_id}_code' class='code-section'>
+                        <div style='font-weight: bold; margin-bottom: 8px; color: #fff;'>Generated Code:</div>
+                        <pre><code>{code if code else "No code generated."}</code></pre>
                     </div>
                     <div style='flex: 1; padding: 16px;'>
                         <div style='font-weight: bold; margin-bottom: 8px;'>生成LLM: {full_model}</div>
                         <div style='font-weight: bold; margin-bottom: 8px;'>Preview:</div>
-                        <div style='overflow-x:auto;'>{preview}</div>
+                        <div style='overflow-x:auto;'>{preview_component}</div>
+                        <button class="reload-preview" onclick="document.getElementById('{model_id}_preview').contentWindow.location.reload();">Reload Preview</button>
                     </div>
                 </div>
             </div>
@@ -309,7 +431,7 @@ def generate_parallel(query, selected_models):
     </div>
     """
     
-    logger.info(f"Completed generation request for {len(results)} models")
+    logger.info(f"Completed parallel generation request for {len(results)} models")
     return grid_html
 
 # 統合Gradioインターフェースの定義
