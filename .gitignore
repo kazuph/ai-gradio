@@ -14,3 +14,5 @@ build/
 *.egg-info/
 .codegpt
 .vscode
+.gradio/
+logs/
