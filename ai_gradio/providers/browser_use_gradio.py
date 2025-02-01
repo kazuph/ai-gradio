@@ -13,8 +13,10 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
             task=inputs["message"],
             llm=ChatOpenAI(
                 api_key=api_key,
-                model=model_name
-            )
+                model=model_name,
+                disabled_params={"parallel_tool_calls": None}
+            ),
+            use_vision=(model_name != "o3-mini-2025-01-31")  # Only disable vision for o3-mini
         )
         
         try:
