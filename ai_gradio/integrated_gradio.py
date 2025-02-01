@@ -34,29 +34,43 @@ INTEGRATED_MODELS = [
 def generate_openai(query, model):
     try:
         logger.info(f"Starting OpenAI generation with model {model}")
-        # OpenAI APIキーの取得
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set.")
         
         client = OpenAI(api_key=api_key)
         
-        # OpenAI API 呼び出し
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that writes code."},
-                {"role": "user", "content": query}
+        system_prompt = """You are an expert web developer. When asked to create a web application:
+1. Always respond with HTML code wrapped in ```html code blocks
+2. Include necessary CSS within <style> tags
+3. Include necessary JavaScript within <script> tags
+4. Ensure the code is complete and self-contained
+5. Add helpful comments explaining key parts of the code
+6. Focus on creating a functional and visually appealing result"""
+        
+        # 基本パラメータ（すべてのモデルで共通）
+        params = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Create a web application that: {query}"}
             ],
-            temperature=0.7,
-            max_tokens=512,
-            stream=False
-        )
+            "stream": False
+        }
+        
+        # o3-mini以外のモデルの場合は追加パラメータを設定
+        if not model.startswith("o3-"):
+            params.update({
+                "max_tokens": 2048,
+                "temperature": 0.7
+            })
+        
+        response = client.chat.completions.create(**params)
         
         response_text = response.choices[0].message.content
         code = remove_code_block(response_text)
         preview = send_to_preview(code)
-        logger.info("Successfully completed OpenAI generation")
+        logger.info(f"Successfully completed OpenAI generation with {model}")
         return code, preview
     except Exception as e:
         logger.error(f"Error in OpenAI generation: {str(e)}")
@@ -65,7 +79,6 @@ def generate_openai(query, model):
 
 def generate_anthropic(query, model):
     try:
-        # Anthropic APIキーの取得
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable is not set.")
@@ -73,15 +86,22 @@ def generate_anthropic(query, model):
         from anthropic import Anthropic
         client = Anthropic(api_key=api_key)
         
-        # Anthropic API 呼び出し
+        # システムプロンプトを改善
+        system_prompt = """You are an expert web developer. Please follow these guidelines:
+1. Always wrap your HTML code in ```html code blocks
+2. Include all necessary CSS and JavaScript within the HTML file
+3. Write clean, modern, and responsive code
+4. Add clear comments explaining the implementation
+5. Focus on creating a functional and visually appealing result
+6. Test that all interactive elements work properly"""
+        
         response = client.messages.create(
             model=model,
-            max_tokens=1024,
+            max_tokens=2048,
             messages=[{
                 "role": "user",
-                "content": f"Please write code for: {query}"
-            }],
-            system="You are an expert programmer. Write clean, efficient code."
+                "content": f"{system_prompt}\n\nCreate a web application that: {query}"
+            }]
         )
         
         response_text = response.content[0].text
@@ -94,7 +114,6 @@ def generate_anthropic(query, model):
 
 def generate_gemini(query, model):
     try:
-        # Google API キーの取得
         api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY environment variable is not set.")
@@ -102,15 +121,22 @@ def generate_gemini(query, model):
         import google.generativeai as genai
         genai.configure(api_key=api_key)
         
-        # Geminiモデルの初期化
         model = genai.GenerativeModel(model_name=model)
         
-        # プロンプトの設定と生成
+        # システムプロンプトを改善
+        system_prompt = """As an expert web developer, please follow these rules:
+1. Generate complete HTML code wrapped in ```html blocks
+2. Include all CSS and JavaScript within the HTML file
+3. Write modern, responsive, and well-structured code
+4. Add descriptive comments for maintainability
+5. Ensure all interactive features are properly implemented
+6. Focus on both functionality and visual appeal"""
+        
         response = model.generate_content(
             [
-                {"role": "user", "parts": [{"text": "You are an expert programmer. Write clean, efficient code."}]},
-                {"role": "model", "parts": [{"text": "I understand. I will help you write clean, efficient code."}]},
-                {"role": "user", "parts": [{"text": query}]}
+                {"role": "user", "parts": [{"text": system_prompt}]},
+                {"role": "model", "parts": [{"text": "I understand and will follow these guidelines."}]},
+                {"role": "user", "parts": [{"text": f"Create a web application that: {query}"}]}
             ],
             stream=False
         )
@@ -166,9 +192,17 @@ def remove_code_block(text):
 
 def send_to_preview(code):
     """HTMLプレビューを生成する"""
-    encoded_html = base64.b64encode(code.encode('utf-8')).decode('utf-8')
-    data_uri = f"data:text/html;charset=utf-8;base64,{encoded_html}"
-    return f'<iframe src="{data_uri}" width="100%" height="480px"></iframe>'
+    # Clean the code and escape special characters for HTML
+    clean_code = code.replace("```html", "").replace("```", "").strip()
+    escaped_code = clean_code.replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+    return f'''
+        <iframe 
+            srcdoc="<!DOCTYPE html><html><body>{escaped_code}</body></html>"
+            width="100%" 
+            height="920px"
+            sandbox="allow-scripts allow-same-origin"
+        ></iframe>
+    '''
 
 # 統合生成関数（並列実行の疑似実装）
 def generate_parallel(query, selected_models):
@@ -206,24 +240,74 @@ def generate_parallel(query, selected_models):
             continue
     
     # 生成結果のグリッドHTMLを作成
-    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;'>"
+    grid_html = """
+    <style>
+        .code-section {
+            display: none;
+        }
+        .code-toggle {
+            cursor: pointer;
+            padding: 4px 8px;
+            background: #eee;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.9em;
+        }
+        .code-toggle:hover {
+            background: #e0e0e0;
+        }
+        .code-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z'/%3E%3C/svg%3E");
+            filter: invert(1);
+        }
+    </style>
+    <div style='height: 100vh; overflow-y: auto; padding: 20px;'>
+        <div style='display: grid; grid-template-columns: repeat(1, 1fr); gap: 24px;'>
+    """
+    
     for full_model, code, preview in results:
-        grid_html += (
-            "<div style='border: 1px solid #ccc; border-radius: 4px; overflow: hidden;'>"
-            "  <div style='background: #f5f5f5; padding: 8px; text-align: center;'>"
-            f"    <strong>{full_model}</strong>"
-            "  </div>"
-            "  <div style='display: flex;'>"
-            "    <div style='flex: 1; border-right: 1px dashed #aaa; padding: 8px; overflow: auto;'>"
-            f"      <pre style='margin:0;'>{code}</pre>"
-            "    </div>"
-            "    <div style='flex: 1; padding: 8px; overflow: auto;'>"
-            f"      {preview}"
-            "    </div>"
-            "  </div>"
-            "</div>"
-        )
-    grid_html += "</div>"
+        provider, model_name = full_model.split(":")
+        model_id = f"model_{provider}_{model_name}".replace("-", "_")
+        
+        grid_html += f"""
+            <div style='border: 1px solid #ccc; border-radius: 8px; overflow: hidden;'>
+                <div style='background: #333; color: #fff; padding: 12px; border-bottom: 1px solid #ccc;'>
+                    <div style='font-size: 1.2em; margin-bottom: 4px;'>
+                        <strong>Provider:</strong> {provider.upper()}
+                    </div>
+                    <div style='display: flex; justify-content: space-between; align-items: center;'>
+                        <div>
+                            <strong>Model:</strong> {model_name}
+                        </div>
+                        <button class="code-toggle" onclick="(function(el, id){{ var cs = document.getElementById(id + '_code'); if(cs.style.display === 'none' || cs.style.display === '') {{ cs.style.display = 'block'; el.innerHTML = '<span class=&quot;code-icon&quot;></span>Hide Code'; }} else {{ cs.style.display = 'none'; el.innerHTML = '<span class=&quot;code-icon&quot;></span>Show Code'; }} }})(this, '{model_id}')">
+                            <span class="code-icon"></span>Show Code
+                        </button>
+                    </div>
+                </div>
+                <div style='display: flex; flex-direction: column;'>
+                    <div id='{model_id}_code' class='code-section' style='flex: 1; padding: 16px; border-bottom: 1px solid #eee;'>
+                        <div style='font-weight: bold; margin-bottom: 8px;'>Generated Code:</div>
+                        <pre style='margin:0; background: #f8f8f8; padding: 12px; border-radius: 4px; overflow-x: auto;'>{code}</pre>
+                    </div>
+                    <div style='flex: 1; padding: 16px;'>
+                        <div style='font-weight: bold; margin-bottom: 8px;'>生成LLM: {full_model}</div>
+                        <div style='font-weight: bold; margin-bottom: 8px;'>Preview:</div>
+                        <div style='overflow-x:auto;'>{preview}</div>
+                    </div>
+                </div>
+            </div>
+        """
+    
+    grid_html += """
+        </div>
+    </div>
+    """
     
     logger.info(f"Completed generation request for {len(results)} models")
     return grid_html
@@ -243,7 +327,7 @@ def build_interface():
                 # マルチセレクト: 統合対象のモデル一覧
                 model_select = gr.Dropdown(
                     choices=INTEGRATED_MODELS,
-                    value=[INTEGRATED_MODELS[0]],
+                    value=[INTEGRATED_MODELS[0], INTEGRATED_MODELS[1]],
                     multiselect=True,
                     label="使用するモデルを選択",
                     info="複数のモデルを選択できます"
