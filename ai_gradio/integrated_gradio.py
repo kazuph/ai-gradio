@@ -198,15 +198,16 @@ def remove_code_block(text):
 
 def send_to_preview(code, iframe_id=""):
     """HTMLプレビューを生成する"""
-    # Clean the code and escape special characters for HTML
+    # Clean the code and create base64 encoded data URI
     clean_code = code.replace("```html", "").replace("```", "").strip()
-    escaped_code = clean_code.replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+    encoded_html = base64.b64encode(clean_code.encode('utf-8')).decode('utf-8')
+    data_uri = f"data:text/html;charset=utf-8;base64,{encoded_html}"
+    
     id_attribute = f' id="{iframe_id}"' if iframe_id else ""
     return f'''
         <iframe{id_attribute}
-            srcdoc="<!DOCTYPE html><html><body>{escaped_code}</body></html>"
-            width="100%" 
-            height="640px"
+            src="{data_uri}"
+            style="width:100%;height:400px;border:none;border-radius:4px;"
             sandbox="allow-scripts allow-same-origin"
         ></iframe>
     '''
@@ -304,123 +305,211 @@ def generate_parallel(query, selected_models):
     # 非同期処理を実行
     results = loop.run_until_complete(run_parallel())
     
-    # 生成結果のグリッドHTMLを作成
+    # 更新: 生成結果のグリッドHTMLの開始部分
     grid_html = """
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-markup.min.js"></script>
     <style>
+        .results-container {
+            width: 100%;
+            padding: 20px;
+            overflow-x: auto;
+            display: flex;
+            gap: 24px;
+        }
+        .results-grid {
+            display: flex;
+            gap: 24px;
+            flex-wrap: nowrap;
+        }
         .code-section {
             display: none;
-            background: #1e1e1e;
-            color: #d4d4d4;
+            background: var(--code-bg, #1e1e1e);
+            color: var(--code-color, #d4d4d4);
             padding: 16px;
             border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
         }
-        .code-toggle {
-            cursor: pointer;
-            padding: 4px 8px;
-            background: #333;
-            color: #fff;
-            border: 1px solid #555;
+        .preview-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 75%; /* 4:3のアスペクト比 */
+            height: 0;
+            overflow: hidden;
+            max-height: 600px;
+        }
+        .preview-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
             border-radius: 4px;
-            display: inline-flex;
+            background: white;
+        }
+        .button-icon {
+            width: 32px;
+            height: 32px;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 0.9em;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
-        .code-toggle:hover {
-            background: #444;
+        .button-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
         }
-        .reload-preview {
-            cursor: pointer;
-            padding: 4px 8px;
-            background: #007bff;
-            color: #fff;
-            border: 1px solid #007bff;
-            border-radius: 4px;
-            font-size: 0.9em;
-            margin-top: 8px;
+        .button-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
         }
-        .reload-preview:hover {
-            background: #0056b3;
+        .result-card {
+            width: 800px;
+            min-width: 800px;
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--card-bg, #2d2d2d);
+            color: var(--text-color, #fff);
+            height: fit-content;
+        }
+        .card-header {
+            background: var(--header-bg, #333);
+            color: var(--header-color, #fff);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-title {
+            font-size: 1.2em;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .button-container {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
         }
         pre {
             margin: 0;
-            padding: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --card-bg: #2d2d2d;
+                --header-bg: #333;
+                --code-bg: #1e1e1e;
+                --text-color: #fff;
+                --border-color: rgba(255, 255, 255, 0.1);
+            }
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --card-bg: #fff;
+                --header-bg: #f5f5f5;
+                --code-bg: #f8f8f8;
+                --text-color: #333;
+                --border-color: rgba(0, 0, 0, 0.1);
+            }
+        }
+        .code-preview {
+            position: relative;
+            background: var(--code-bg);
+            border-radius: 4px;
+            margin: 16px 0;
+        }
+        .code-preview iframe {
+            width: 100%;
+            height: 400px;
+            border: none;
+            background: white;
+        }
+        .code-content {
+            position: relative;
+            padding: 16px;
+            background: var(--code-bg);
             border-radius: 4px;
             overflow-x: auto;
-            background: #1e1e1e !important;
-            color: #d4d4d4 !important;
         }
-        .code-icon {
-            width: 16px;
-            height: 16px;
-            display: inline-block;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z'/%3E%3C/svg%3E");
+        .code-content pre {
+            margin: 0;
+            padding: 16px;
+            background: transparent;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.5;
         }
-        .results-container {
-            width: 100vw;
-            max-width: 100vw;
-            overflow-x: auto;
-            white-space: nowrap;
-            padding: 20px;
-            max-height: 100vh;
-            overflow-y: auto;
-        }
-        .results-grid {
-            display: inline-flex;
-            gap: 24px;
-        }
-        .result-card {
-            width: 1200px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        /* シンタックスハイライト用の色設定 */
-        pre .keyword { color: #569cd6 !important; }
-        pre .string { color: #ce9178 !important; }
-        pre .comment { color: #6a9955 !important; }
-        pre .function { color: #dcdcaa !important; }
-        pre .number { color: #b5cea8 !important; }
-        pre .operator { color: #d4d4d4 !important; }
-        pre .punctuation { color: #d4d4d4 !important; }
     </style>
     <div class='results-container'>
         <div class='results-grid'>
     """
-    
+
+    # 結果カード生成部分で、ボタンの onclick をインラインで実装
     for full_model, code, preview in results:
         provider, model_name = full_model.split(":")
         model_id = f"model_{provider}_{model_name}".replace("-", "_")
         
-        # 各結果ごとにプレビューiframeを再生成し、固有のiframe idを付与
-        preview_component = send_to_preview(code, iframe_id=f"{model_id}_preview")
+        preview_iframe = send_to_preview(code, iframe_id=f"{model_id}_preview")
+        escaped_code = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         
         grid_html += f"""
             <div class='result-card'>
-                <div style='background: #333; color: #fff; padding: 12px; border-bottom: 1px solid #ccc;'>
-                    <div style='font-size: 1.2em; margin-bottom: 4px;'>
-                        <strong>Provider:</strong> {provider.upper()}
+                <div class='card-header'>
+                    <div class='header-title'>
+                        <strong>{provider.upper()}</strong> - {model_name}
                     </div>
-                    <div style='display: flex; justify-content: space-between; align-items: center;'>
-                        <div>
-                            <strong>Model:</strong> {model_name}
-                        </div>
-                        <button class="code-toggle" onclick="(function(el, id){{ var cs = document.getElementById(id + '_code'); if(cs.style.display === 'none' || cs.style.display === '') {{ cs.style.display = 'block'; el.innerHTML = '<span class=&quot;code-icon&quot;></span>Hide Code'; }} else {{ cs.style.display = 'none'; el.innerHTML = '<span class=&quot;code-icon&quot;></span>Show Code'; }} }})(this, '{model_id}')">
-                            <span class="code-icon"></span>Show Code
+                    <div class='header-buttons'>
+                        <button class="button-icon" onclick="(function(){{ 
+                            var codeEl = document.getElementById('{model_id}_code'); 
+                            if (codeEl){{ 
+                                codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none'); 
+                                if (codeEl.style.display === 'block' && window.Prism){{{{ Prism.highlightAll(); }}}} 
+                            }} 
+                        }})()" title="コードを表示/非表示">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+                            </svg>
+                        </button>
+                        <button class="button-icon" onclick="(function(){{ 
+                            var iframe = document.getElementById('{model_id}_preview');
+                            if (iframe && iframe.contentWindow){{ 
+                                iframe.contentWindow.location.reload();
+                            }} 
+                        }})()" title="プレビューを更新">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                            </svg>
                         </button>
                     </div>
                 </div>
-                <div style='display: flex; flex-direction: column;'>
-                    <div id='{model_id}_code' class='code-section'>
-                        <div style='font-weight: bold; margin-bottom: 8px; color: #fff;'>Generated Code:</div>
-                        <pre><code>{code if code else "No code generated."}</code></pre>
+                <div style='position: relative;'>
+                    <div class='preview-container'>
+                        {preview_iframe}
                     </div>
-                    <div style='flex: 1; padding: 16px;'>
-                        <div style='font-weight: bold; margin-bottom: 8px;'>生成LLM: {full_model}</div>
-                        <div style='font-weight: bold; margin-bottom: 8px;'>Preview:</div>
-                        <div style='overflow-x:auto;'>{preview_component}</div>
-                        <button class="reload-preview" onclick="document.getElementById('{model_id}_preview').contentWindow.location.reload();">Reload Preview</button>
+                    <div id='{model_id}_code' class='code-content' style='display:none;'>
+                        <pre><code class="language-html">{escaped_code}</code></pre>
                     </div>
                 </div>
             </div>
