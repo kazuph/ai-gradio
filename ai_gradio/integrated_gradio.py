@@ -116,9 +116,9 @@ def generate_anthropic(query, model):
         err = f"Error in Anthropic: {str(e)}"
         return err, f"<div style='padding: 8px;color:red;'>{err}</div>"
 
-def generate_gemini(query, model):
+def generate_gemini(query, model, code=None):
     try:
-        load_dotenv()  # .envファイルを読み込み
+        load_dotenv()
         
         api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
@@ -129,7 +129,25 @@ def generate_gemini(query, model):
         
         model = genai.GenerativeModel(model_name=model)
         
-        # システムプロンプトを改善
+        if code:  # コード解説モード
+            system_prompt = """あなたは優秀なプログラマーです。
+提供されたHTMLコードを分析し、以下の点について日本語で解説してください：
+1. コードの全体的な構造と目的
+2. 使用されている主要な技術（HTML/CSS/JavaScript）
+3. 実装の特徴や工夫している点
+4. 改善できる点があれば指摘
+簡潔かつ分かりやすく説明してください。"""
+            
+            response = model.generate_content(
+                [
+                    {"role": "user", "parts": [{"text": f"{system_prompt}\n\nコード:\n{code}"}]}
+                ],
+                stream=False
+            )
+            
+            return response.text
+
+        # 通常のコード生成モード（既存のコード）
         system_prompt = """As an expert web developer, please follow these rules:
 1. Generate complete HTML code wrapped in ```html blocks
 2. Include all CSS and JavaScript within the HTML file
@@ -207,7 +225,7 @@ def send_to_preview(code, iframe_id=""):
     return f'''
         <iframe{id_attribute}
             src="{data_uri}"
-            style="width:100%;height:400px;border:none;border-radius:4px;"
+            style="width:100%;border:none;border-radius:4px;"
             sandbox="allow-scripts allow-same-origin"
         ></iframe>
     '''
@@ -254,101 +272,145 @@ async def async_generate_deepseek(query, model):
                 f"<div style='padding: 8px;color:red;'>Error in DeepSeek: {str(e)}</div>")
 
 # 統合生成関数を非同期処理に更新
-def generate_parallel(query, selected_models):
-    # リクエストのログ出力
+async def generate_parallel(query, selected_models):
     logger.info(f"Received generation request - Query: {query}")
     logger.info(f"Selected models: {selected_models}")
     
-    async def run_parallel():
-        tasks = []
-        for full_model in selected_models:
-            try:
-                provider, model = full_model.split(":")
-                logger.info(f"Preparing task for {full_model}")
-                
-                if provider == "openai":
-                    task = async_generate_openai(query, model)
-                elif provider == "anthropic":
-                    task = async_generate_anthropic(query, model)
-                elif provider == "gemini":
-                    task = async_generate_gemini(query, model)
-                elif provider == "deepseek":
-                    task = async_generate_deepseek(query, model)
-                else:
-                    logger.error(f"Unknown provider: {full_model}")
-                    continue
-                
-                tasks.append((full_model, task))
-                
-            except Exception as e:
-                logger.error(f"Error preparing task for {full_model}: {str(e)}")
+    tasks = []
+    for full_model in selected_models:
+        try:
+            provider, model = full_model.split(":")
+            logger.info(f"Preparing task for {full_model}")
+            
+            if provider == "openai":
+                task = async_generate_openai(query, model)
+            elif provider == "anthropic":
+                task = async_generate_anthropic(query, model)
+            elif provider == "gemini":
+                task = async_generate_gemini(query, model)
+            elif provider == "deepseek":
+                task = async_generate_deepseek(query, model)
+            else:
+                logger.error(f"Unknown provider: {full_model}")
                 continue
+            
+            tasks.append((full_model, task))
+            
+        except Exception as e:
+            logger.error(f"Error preparing task for {full_model}: {str(e)}")
+            continue
+    
+    results = []
+    if tasks:
+        # コード生成タスクを実行
+        completed_tasks = await asyncio.gather(*(task for _, task in tasks))
         
-        # 並列実行
+        # 解説生成タスクを準備
+        explanation_tasks = []
+        for (full_model, _), (code, preview) in zip(tasks, completed_tasks):
+            if code and not code.startswith("Error"):
+                # 解説生成を非同期タスクとして追加
+                explanation_task = asyncio.create_task(asyncio.to_thread(
+                    generate_gemini,
+                    None,
+                    "gemini-exp-1206",
+                    code
+                ))
+                explanation_tasks.append((full_model, explanation_task))
+            else:
+                explanation_tasks.append((full_model, None))
+        
+        # 解説生成タスクを実行
+        explanations = []
         results = []
-        if tasks:
-            # 非同期タスクを同時実行
-            completed_tasks = await asyncio.gather(*(task for _, task in tasks))
-            # 結果を整理
-            for (full_model, _), (code, preview) in zip(tasks, completed_tasks):
-                results.append((full_model, code, preview))
+        for i, (full_model, task) in enumerate(explanation_tasks):
+            if task:
+                try:
+                    explanation = await task
+                except Exception as e:
+                    logger.error(f"Error generating explanation for {full_model}: {str(e)}")
+                    explanation = "解説の生成に失敗しました。"
+            else:
+                explanation = "コード生成に失敗したため、解説を生成できません。"
+            explanations.append(explanation)
+            code, preview = completed_tasks[i]
+            results.append((full_model, code, preview, explanation))
         
-        return results
+        # 総合解説の生成（2つ以上の結果がある場合のみ）
+        if len(explanations) > 1:
+            try:
+                analysis = await asyncio.to_thread(
+                    generate_gemini,
+                    None,
+                    "gemini-exp-1206",
+                    "以下の各モデルによる実装の解説を比較分析し、最も優れた実装はどれか考察してください:\n\n" + 
+                    "\n\n".join(explanations)
+                )
+                results.append(("analysis", "", "", analysis))
+            except Exception as e:
+                logger.error(f"Error generating analysis: {str(e)}")
+                results.append(("analysis", "", "", "総合解説の生成に失敗しました。"))
 
-    # asyncioのイベントループを取得または作成
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    
-    # 非同期処理を実行
-    results = loop.run_until_complete(run_parallel())
-    
-    # 更新: 生成結果のグリッドHTMLの開始部分
+    # HTMLの生成
     grid_html = """
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-markup.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         .results-container {
             width: 100%;
             padding: 20px;
             overflow-x: auto;
-            display: flex;
-            gap: 24px;
         }
         .results-grid {
             display: flex;
+            flex-wrap: wrap;
             gap: 24px;
-            flex-wrap: nowrap;
+            justify-content: center;
         }
-        .code-section {
-            display: none;
-            background: var(--code-bg, #1e1e1e);
-            color: var(--code-color, #d4d4d4);
+        .result-card {
+            width: 800px;
+            min-width: 800px;
+            background: var(--card-bg, #ffffff);
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 16px;
-            border-radius: 4px;
-            max-height: 400px;
-            overflow-y: auto;
+            background: var(--header-bg, #f5f5f5);
+            border-bottom: 1px solid var(--border-color, #e0e0e0);
         }
         .preview-container {
-            position: relative;
             width: 100%;
-            padding-bottom: 75%; /* 4:3のアスペクト比 */
-            height: 0;
-            overflow: hidden;
-            max-height: 600px;
+            aspect-ratio: 1;
+            position: relative;
+            background: white;
         }
         .preview-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
             border: none;
-            border-radius: 4px;
-            background: white;
+        }
+        .code-content {
+            display: none;
+            padding: 16px;
+            background: var(--code-bg, #1e1e1e);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .explanation {
+            padding: 16px;
+            border-top: 1px solid var(--border-color, #e0e0e0);
+        }
+        .header-buttons {
+            display: flex;
+            gap: 8px;
         }
         .button-icon {
             width: 32px;
@@ -373,154 +435,170 @@ def generate_parallel(query, selected_models):
             height: 18px;
             fill: currentColor;
         }
-        .result-card {
-            width: 800px;
-            min-width: 800px;
-            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-            border-radius: 8px;
-            overflow: hidden;
-            background: var(--card-bg, #2d2d2d);
-            color: var(--text-color, #fff);
-            height: fit-content;
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
         }
-        .card-header {
-            background: var(--header-bg, #333);
-            color: var(--header-color, #fff);
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header-title {
-            font-size: 1.2em;
-        }
-        .header-buttons {
-            display: flex;
-            gap: 8px;
-        }
-        .button-container {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            display: flex;
-            gap: 8px;
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 4px;
-            border-radius: 20px;
-            backdrop-filter: blur(4px);
-        }
-        pre {
-            margin: 0;
-            white-space: pre-wrap;
+        
+        /* マークダウンスタイルを追加 */
+        .markdown-body {
+            color: var(--text-color, #333);
+            line-height: 1.6;
             word-wrap: break-word;
         }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --card-bg: #2d2d2d;
-                --header-bg: #333;
-                --code-bg: #1e1e1e;
-                --text-color: #fff;
-                --border-color: rgba(255, 255, 255, 0.1);
-            }
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3,
+        .markdown-body h4 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
         }
-        @media (prefers-color-scheme: light) {
-            :root {
-                --card-bg: #fff;
-                --header-bg: #f5f5f5;
-                --code-bg: #f8f8f8;
-                --text-color: #333;
-                --border-color: rgba(0, 0, 0, 0.1);
-            }
-        }
-        .code-preview {
-            position: relative;
-            background: var(--code-bg);
-            border-radius: 4px;
-            margin: 16px 0;
-        }
-        .code-preview iframe {
-            width: 100%;
-            height: 400px;
-            border: none;
-            background: white;
-        }
-        .code-content {
-            position: relative;
-            padding: 16px;
-            background: var(--code-bg);
-            border-radius: 4px;
-            overflow-x: auto;
-        }
-        .code-content pre {
+        .markdown-body code {
+            padding: 0.2em 0.4em;
             margin: 0;
-            padding: 16px;
-            background: transparent;
-            font-family: 'Fira Code', monospace;
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 85%;
+            background-color: var(--code-bg-inline, rgba(27,31,35,0.05));
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .markdown-body pre code {
+            padding: 0;
+            background-color: transparent;
+        }
+        .markdown-body ul,
+        .markdown-body ol {
+            padding-left: 2em;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        .markdown-body blockquote {
+            padding: 0 1em;
+            color: var(--quote-color, #6a737d);
+            border-left: 0.25em solid var(--quote-border, #dfe2e5);
+            margin: 0 0 16px 0;
         }
     </style>
+    <script>
+        function initializeMarkdown() {
+            // マークダウンの設定
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                headerIds: false
+            });
+            
+            // 修正: data-markdown 属性があればその値を利用し、なければ内包テキストを使用する
+            document.querySelectorAll('.markdown-body').forEach(function(element) {
+                const rawMarkdown = element.getAttribute('data-markdown') || element.textContent;
+                if (rawMarkdown) {
+                    try {
+                        element.innerHTML = marked.parse(rawMarkdown);
+                    } catch (e) {
+                        console.error('Markdown parsing error:', e);
+                    }
+                }
+            });
+            
+            // シンタックスハイライトを適用
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        }
+
+        // DOMContentLoadedとload両方で初期化を試みる
+        document.addEventListener('DOMContentLoaded', initializeMarkdown);
+        window.addEventListener('load', initializeMarkdown);
+        
+        // 1秒後にも実行（非同期コンテンツ対策）
+        setTimeout(initializeMarkdown, 1000);
+    </script>
     <div class='results-container'>
         <div class='results-grid'>
     """
 
-    # 結果カード生成部分で、ボタンの onclick をインラインで実装
-    for full_model, code, preview in results:
-        provider, model_name = full_model.split(":")
-        model_id = f"model_{provider}_{model_name}".replace("-", "_")
-        
-        preview_iframe = send_to_preview(code, iframe_id=f"{model_id}_preview")
-        escaped_code = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        
-        grid_html += f"""
-            <div class='result-card'>
-                <div class='card-header'>
-                    <div class='header-title'>
-                        <strong>{provider.upper()}</strong> - {model_name}
-                    </div>
-                    <div class='header-buttons'>
-                        <button class="button-icon" onclick="(function(){{ 
-                            var codeEl = document.getElementById('{model_id}_code'); 
-                            if (codeEl){{ 
-                                codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none'); 
-                                if (codeEl.style.display === 'block' && window.Prism){{{{ Prism.highlightAll(); }}}} 
-                            }} 
-                        }})()" title="コードを表示/非表示">
-                            <svg viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
-                            </svg>
-                        </button>
-                        <button class="button-icon" onclick="(function(){{ 
-                            var iframe = document.getElementById('{model_id}_preview');
-                            if (iframe && iframe.contentWindow){{ 
-                                iframe.contentWindow.location.reload();
-                            }} 
-                        }})()" title="プレビューを更新">
-                            <svg viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div style='position: relative;'>
-                    <div class='preview-container'>
-                        {preview_iframe}
-                    </div>
-                    <div id='{model_id}_code' class='code-content' style='display:none;'>
-                        <pre><code class="language-html">{escaped_code}</code></pre>
-                    </div>
-                </div>
-            </div>
-        """
+    # デバッグログを追加
+    logger.info(f"Processing {len(results)} results")
     
+    # 結果カードの生成
+    for full_model, code, preview, explanation in results:
+        logger.info(f"Generating card for model: {full_model}")
+        
+        if full_model == "analysis":
+            grid_html += f"""
+                <div class='result-card analysis-card'>
+                    <div class='card-header'>
+                        <div class='header-title'>実装の比較分析</div>
+                    </div>
+                    <div class='explanation'>
+                        <div class='markdown-body' data-markdown="{explanation.replace('"', '&quot;')}">
+                            {explanation}
+                        </div>
+                    </div>
+                </div>
+            """
+        else:
+            provider, model_name = full_model.split(":")
+            model_id = f"model_{provider}_{model_name}".replace("-", "_")
+            
+            preview_iframe = send_to_preview(code, iframe_id=f"{model_id}_preview")
+            escaped_code = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            
+            grid_html += f"""
+                <div class='result-card'>
+                    <div class='card-header'>
+                        <div class='header-title'>
+                            <strong>{provider.upper()}</strong> - {model_name}
+                        </div>
+                        <div class='header-buttons'>
+                            <button class="button-icon" onclick="(function(){{ 
+                                var codeEl = document.getElementById('{model_id}_code'); 
+                                if (codeEl){{ 
+                                    codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none'); 
+                                    if (codeEl.style.display === 'block' && window.Prism){{{{ Prism.highlightAll(); }}}} 
+                                }} 
+                            }})()" title="コードを表示/非表示">
+                                <svg viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+                                </svg>
+                            </button>
+                            <button class="button-icon" onclick="(function(){{ 
+                                var iframe = document.getElementById('{model_id}_preview');
+                                if (iframe && iframe.contentWindow){{ 
+                                    iframe.contentWindow.location.reload();
+                                }} 
+                            }})()" title="プレビューを更新">
+                                <svg viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div style='position: relative;'>
+                        <div class='preview-container'>
+                            {preview_iframe}
+                        </div>
+                        <div id='{model_id}_code' class='code-content' style='display:none;'>
+                            <pre><code class="language-html">{escaped_code}</code></pre>
+                        </div>
+                    </div>
+                    <div class='explanation'>
+                        <h4>コードの解説:</h4>
+                        <div class='markdown-body' data-markdown="{explanation.replace('"', '&quot;')}">
+                            {explanation}
+                        </div>
+                    </div>
+                </div>
+            """
+
     grid_html += """
         </div>
     </div>
     """
     
-    logger.info(f"Completed parallel generation request for {len(results)} models")
+    logger.info("Completed generating HTML grid")
     return grid_html
 
 # 統合Gradioインターフェースの定義
