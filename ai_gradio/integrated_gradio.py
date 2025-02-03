@@ -25,13 +25,13 @@ load_dotenv()  # 追加: .envファイルから環境変数をグローバルに
 INTEGRATED_MODELS = [
     "openai:o3-mini",
     "openai:gpt-4o-mini", 
-    "openai:gpt-4o", 
+    # "openai:gpt-4o", 
     "anthropic:claude-3-5-sonnet-20241022", 
     "gemini:gemini-2.0-flash-exp",
     "gemini:gemini-exp-1206",
-    "gemini:gemini-2.0-flash-thinking-exp",
-    "gemini:gemini-1.5-pro", 
-    "deepseek:deepseek-r1",
+    # "gemini:gemini-2.0-flash-thinking-exp",
+    # "gemini:gemini-1.5-pro", 
+    # "deepseek:deepseek-r1",
 ]
 
 # 各provider毎のLLM生成関数の実装を更新
@@ -116,7 +116,7 @@ def generate_anthropic(query, model):
         err = f"Error in Anthropic: {str(e)}"
         return err, f"<div style='padding: 8px;color:red;'>{err}</div>"
 
-def generate_gemini(query, model, code=None):
+def generate_gemini(query, model):
     try:
         load_dotenv()
         
@@ -129,25 +129,6 @@ def generate_gemini(query, model, code=None):
         
         model = genai.GenerativeModel(model_name=model)
         
-        if code:  # コード解説モード
-            system_prompt = """あなたは優秀なプログラマーです。
-提供されたHTMLコードを分析し、以下の点について日本語で解説してください：
-1. コードの全体的な構造と目的
-2. 使用されている主要な技術（HTML/CSS/JavaScript）
-3. 実装の特徴や工夫している点
-4. 改善できる点があれば指摘
-簡潔かつ分かりやすく説明してください。"""
-            
-            response = model.generate_content(
-                [
-                    {"role": "user", "parts": [{"text": f"{system_prompt}\n\nコード:\n{code}"}]}
-                ],
-                stream=False
-            )
-            
-            return response.text
-
-        # 通常のコード生成モード（既存のコード）
         system_prompt = """As an expert web developer, please follow these rules:
 1. Generate complete HTML code wrapped in ```html blocks
 2. Include all CSS and JavaScript within the HTML file
@@ -271,10 +252,17 @@ async def async_generate_deepseek(query, model):
         return (f"Error in DeepSeek: {str(e)}",
                 f"<div style='padding: 8px;color:red;'>Error in DeepSeek: {str(e)}</div>")
 
-# 統合生成関数を非同期処理に更新
+# 統合生成関数を簡素化
 async def generate_parallel(query, selected_models):
     logger.info(f"Received generation request - Query: {query}")
     logger.info(f"Selected models: {selected_models}")
+    
+    # 同時実行数を制御するセマフォを作成（必要に応じて数値を調整）
+    semaphore = asyncio.Semaphore(5)  # 同時に5つまで実行可能
+    
+    async def run_with_semaphore(full_model, task):
+        async with semaphore:
+            return await task
     
     tasks = []
     for full_model in selected_models:
@@ -294,7 +282,7 @@ async def generate_parallel(query, selected_models):
                 logger.error(f"Unknown provider: {full_model}")
                 continue
             
-            tasks.append((full_model, task))
+            tasks.append((full_model, run_with_semaphore(full_model, task)))
             
         except Exception as e:
             logger.error(f"Error preparing task for {full_model}: {str(e)}")
@@ -302,296 +290,202 @@ async def generate_parallel(query, selected_models):
     
     results = []
     if tasks:
-        # コード生成タスクを実行
         completed_tasks = await asyncio.gather(*(task for _, task in tasks))
-        
-        # 解説生成タスクを準備
-        explanation_tasks = []
         for (full_model, _), (code, preview) in zip(tasks, completed_tasks):
-            if code and not code.startswith("Error"):
-                # 解説生成を非同期タスクとして追加
-                explanation_task = asyncio.create_task(asyncio.to_thread(
-                    generate_gemini,
-                    None,
-                    "gemini-exp-1206",
-                    code
-                ))
-                explanation_tasks.append((full_model, explanation_task))
-            else:
-                explanation_tasks.append((full_model, None))
-        
-        # 解説生成タスクを実行
-        explanations = []
-        results = []
-        for i, (full_model, task) in enumerate(explanation_tasks):
-            if task:
-                try:
-                    explanation = await task
-                except Exception as e:
-                    logger.error(f"Error generating explanation for {full_model}: {str(e)}")
-                    explanation = "解説の生成に失敗しました。"
-            else:
-                explanation = "コード生成に失敗したため、解説を生成できません。"
-            explanations.append(explanation)
-            code, preview = completed_tasks[i]
-            results.append((full_model, code, preview, explanation))
-        
-        # 総合解説の生成（2つ以上の結果がある場合のみ）
-        if len(explanations) > 1:
-            try:
-                analysis = await asyncio.to_thread(
-                    generate_gemini,
-                    None,
-                    "gemini-exp-1206",
-                    "以下の各モデルによる実装の解説を比較分析し、最も優れた実装はどれか考察してください:\n\n" + 
-                    "\n\n".join(explanations)
-                )
-                results.append(("analysis", "", "", analysis))
-            except Exception as e:
-                logger.error(f"Error generating analysis: {str(e)}")
-                results.append(("analysis", "", "", "総合解説の生成に失敗しました。"))
+            results.append((full_model, code, preview))
 
     # HTMLの生成
     grid_html = """
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-markup.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
+        :root {
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --header-bg: #f5f5f5;
+            --code-bg: #1e1e1e;
+            --text-color: #333333;
+            --preview-bg: #ffffff;
+            --preview-border: #e0e0e0;
+            --button-bg: rgba(0, 0, 0, 0.1);
+            --button-hover: rgba(0, 0, 0, 0.2);
+            --button-color: #333333;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --card-bg: #2d2d2d;
+                --border-color: #444444;
+                --header-bg: #1a1a1a;
+                --code-bg: #1e1e1e;
+                --text-color: #e0e0e0;
+                --preview-bg: #ffffff;
+                --preview-border: #444444;
+                --button-bg: rgba(255, 255, 255, 0.1);
+                --button-hover: rgba(255, 255, 255, 0.2);
+                --button-color: #ffffff;
+            }
+        }
+
         .results-container {
             width: 100%;
             padding: 20px;
             overflow-x: auto;
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
+
         .results-grid {
             display: flex;
             flex-wrap: wrap;
             gap: 24px;
             justify-content: center;
         }
+
         .result-card {
             width: 800px;
             min-width: 800px;
-            background: var(--card-bg, #ffffff);
-            border: 1px solid var(--border-color, #e0e0e0);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             overflow: hidden;
             margin-bottom: 24px;
         }
+
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 16px;
-            background: var(--header-bg, #f5f5f5);
-            border-bottom: 1px solid var(--border-color, #e0e0e0);
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color);
         }
+
         .preview-container {
             width: 100%;
             aspect-ratio: 1;
             position: relative;
-            background: white;
+            background: var(--preview-bg);
+            border: 1px solid var(--preview-border);
+            border-radius: 4px;
+            margin: 16px;
         }
+
         .preview-container iframe {
             width: 100%;
             height: 100%;
             border: none;
+            background: var(--preview-bg);
         }
+
         .code-content {
             display: none;
             padding: 16px;
-            background: var(--code-bg, #1e1e1e);
+            background: var(--code-bg);
             max-height: 400px;
             overflow-y: auto;
+            margin: 16px;
+            border-radius: 4px;
         }
-        .explanation {
-            padding: 16px;
-            border-top: 1px solid var(--border-color, #e0e0e0);
+
+        .code-content pre {
+            margin: 0;
         }
+
+        .code-content code {
+            color: #e0e0e0;
+        }
+
         .header-buttons {
             display: flex;
             gap: 8px;
         }
+
         .button-icon {
             width: 32px;
             height: 32px;
             padding: 6px;
             border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--border-color);
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
+            background: var(--button-bg);
+            color: var(--button-color);
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
         }
+
         .button-icon:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.3);
+            background: var(--button-hover);
         }
+
         .button-icon svg {
             width: 18px;
             height: 18px;
             fill: currentColor;
         }
+
         @media (max-width: 768px) {
             .results-grid {
                 grid-template-columns: 1fr;
             }
         }
-        
-        /* マークダウンスタイルを追加 */
-        .markdown-body {
-            color: var(--text-color, #333);
-            line-height: 1.6;
-            word-wrap: break-word;
-        }
-        .markdown-body h1,
-        .markdown-body h2,
-        .markdown-body h3,
-        .markdown-body h4 {
-            margin-top: 24px;
-            margin-bottom: 16px;
-            font-weight: 600;
-            line-height: 1.25;
-        }
-        .markdown-body code {
-            padding: 0.2em 0.4em;
-            margin: 0;
-            font-size: 85%;
-            background-color: var(--code-bg-inline, rgba(27,31,35,0.05));
-            border-radius: 3px;
-            font-family: monospace;
-        }
-        .markdown-body pre code {
-            padding: 0;
-            background-color: transparent;
-        }
-        .markdown-body ul,
-        .markdown-body ol {
-            padding-left: 2em;
-            margin-top: 0;
-            margin-bottom: 16px;
-        }
-        .markdown-body blockquote {
-            padding: 0 1em;
-            color: var(--quote-color, #6a737d);
-            border-left: 0.25em solid var(--quote-border, #dfe2e5);
-            margin: 0 0 16px 0;
-        }
     </style>
-    <script>
-        function initializeMarkdown() {
-            // マークダウンの設定
-            marked.setOptions({
-                breaks: true,
-                gfm: true,
-                headerIds: false
-            });
-            
-            // 修正: data-markdown 属性があればその値を利用し、なければ内包テキストを使用する
-            document.querySelectorAll('.markdown-body').forEach(function(element) {
-                const rawMarkdown = element.getAttribute('data-markdown') || element.textContent;
-                if (rawMarkdown) {
-                    try {
-                        element.innerHTML = marked.parse(rawMarkdown);
-                    } catch (e) {
-                        console.error('Markdown parsing error:', e);
-                    }
-                }
-            });
-            
-            // シンタックスハイライトを適用
-            if (window.Prism) {
-                Prism.highlightAll();
-            }
-        }
-
-        // DOMContentLoadedとload両方で初期化を試みる
-        document.addEventListener('DOMContentLoaded', initializeMarkdown);
-        window.addEventListener('load', initializeMarkdown);
-        
-        // 1秒後にも実行（非同期コンテンツ対策）
-        setTimeout(initializeMarkdown, 1000);
-    </script>
     <div class='results-container'>
         <div class='results-grid'>
     """
 
-    # デバッグログを追加
-    logger.info(f"Processing {len(results)} results")
-    
     # 結果カードの生成
-    for full_model, code, preview, explanation in results:
-        logger.info(f"Generating card for model: {full_model}")
+    for full_model, code, preview in results:
+        provider, model_name = full_model.split(":")
+        model_id = f"model_{provider}_{model_name}".replace("-", "_")
         
-        if full_model == "analysis":
-            grid_html += f"""
-                <div class='result-card analysis-card'>
-                    <div class='card-header'>
-                        <div class='header-title'>実装の比較分析</div>
+        preview_iframe = send_to_preview(code, iframe_id=f"{model_id}_preview")
+        escaped_code = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        
+        grid_html += f"""
+            <div class='result-card'>
+                <div class='card-header'>
+                    <div class='header-title'>
+                        <strong>{provider.upper()}</strong> - {model_name}
                     </div>
-                    <div class='explanation'>
-                        <div class='markdown-body' data-markdown="{explanation.replace('"', '&quot;')}">
-                            {explanation}
-                        </div>
-                    </div>
-                </div>
-            """
-        else:
-            provider, model_name = full_model.split(":")
-            model_id = f"model_{provider}_{model_name}".replace("-", "_")
-            
-            preview_iframe = send_to_preview(code, iframe_id=f"{model_id}_preview")
-            escaped_code = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            
-            grid_html += f"""
-                <div class='result-card'>
-                    <div class='card-header'>
-                        <div class='header-title'>
-                            <strong>{provider.upper()}</strong> - {model_name}
-                        </div>
-                        <div class='header-buttons'>
-                            <button class="button-icon" onclick="(function(){{ 
-                                var codeEl = document.getElementById('{model_id}_code'); 
-                                if (codeEl){{ 
-                                    codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none'); 
-                                    if (codeEl.style.display === 'block' && window.Prism){{{{ Prism.highlightAll(); }}}} 
-                                }} 
-                            }})()" title="コードを表示/非表示">
-                                <svg viewBox="0 0 24 24">
-                                    <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
-                                </svg>
-                            </button>
-                            <button class="button-icon" onclick="(function(){{ 
-                                var iframe = document.getElementById('{model_id}_preview');
-                                if (iframe && iframe.contentWindow){{ 
-                                    iframe.contentWindow.location.reload();
-                                }} 
-                            }})()" title="プレビューを更新">
-                                <svg viewBox="0 0 24 24">
-                                    <path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div style='position: relative;'>
-                        <div class='preview-container'>
-                            {preview_iframe}
-                        </div>
-                        <div id='{model_id}_code' class='code-content' style='display:none;'>
-                            <pre><code class="language-html">{escaped_code}</code></pre>
-                        </div>
-                    </div>
-                    <div class='explanation'>
-                        <h4>コードの解説:</h4>
-                        <div class='markdown-body' data-markdown="{explanation.replace('"', '&quot;')}">
-                            {explanation}
-                        </div>
+                    <div class='header-buttons'>
+                        <button class="button-icon" onclick="(function(){{ 
+                            var codeEl = document.getElementById('{model_id}_code'); 
+                            if (codeEl){{ 
+                                codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none'); 
+                                if (codeEl.style.display === 'block' && window.Prism){{{{ Prism.highlightAll(); }}}} 
+                            }} 
+                        }})()" title="コードを表示/非表示">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+                            </svg>
+                        </button>
+                        <button class="button-icon" onclick="(function(){{ 
+                            var iframe = document.getElementById('{model_id}_preview');
+                            if (iframe && iframe.contentWindow){{ 
+                                iframe.contentWindow.location.reload();
+                            }} 
+                        }})()" title="プレビューを更新">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
-            """
+                <div style='position: relative;'>
+                    <div class='preview-container'>
+                        {preview_iframe}
+                    </div>
+                    <div id='{model_id}_code' class='code-content' style='display:none;'>
+                        <pre><code class="language-html">{escaped_code}</code></pre>
+                    </div>
+                </div>
+            </div>
+        """
 
     grid_html += """
         </div>
@@ -616,7 +510,13 @@ def build_interface():
                 # マルチセレクト: 統合対象のモデル一覧
                 model_select = gr.Dropdown(
                     choices=INTEGRATED_MODELS,
-                    value=[INTEGRATED_MODELS[0], INTEGRATED_MODELS[1]],
+                    value=[
+                        INTEGRATED_MODELS[0], 
+                        INTEGRATED_MODELS[1],
+                        INTEGRATED_MODELS[2],
+                        INTEGRATED_MODELS[3],
+                        INTEGRATED_MODELS[4],
+                    ],
                     multiselect=True,
                     label="使用するモデルを選択",
                     info="複数のモデルを選択できます"

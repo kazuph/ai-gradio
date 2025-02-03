@@ -1,10 +1,5 @@
-from importlib.metadata import version
+"""
+AI Gradio - Web Application Generator
+"""
 
-try:
-    __version__ = version("ai-gradio")
-except Exception:
-    __version__ = "unknown"
-
-from .providers import registry
-
-__all__ = ["registry"]
+__version__ = "0.1.0"
