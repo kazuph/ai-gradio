@@ -1,3 +1,5 @@
+![image](https://github.com/user-attachments/assets/fe3c7fcd-a343-46c7-8612-9b14bf9e4808)
+
 # 🎨 AI Gradio Code Generator
 
 A Gradio-based interface that enables the generation of web applications using multiple AI providers.
