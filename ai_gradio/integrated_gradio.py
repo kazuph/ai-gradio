@@ -24,6 +24,7 @@ load_dotenv()  # 追加: .envファイルから環境変数をグローバルに
 # 定数: 各provider:モデル名のリスト (OpenAIは gpt-4o, gpt-4o-mini, o3-mini のみ)
 INTEGRATED_MODELS = [
     "openai:o3-mini",
+    "openai:o3-mini-high",
     "openai:gpt-4o-mini", 
     # "openai:gpt-4o", 
     "anthropic:claude-3-5-sonnet-20241022", 
@@ -52,9 +53,15 @@ def generate_openai(query, model):
 5. Add helpful comments explaining key parts of the code
 6. Focus on creating a functional and visually appealing result"""
         
+        # モデル名とパラメータの処理
+        if model in ("openai:o3-mini-high", "o3-mini-high"):
+            actual_model = "o3-mini"
+        else:
+            actual_model = model.replace("openai:", "")
+        
         # 基本パラメータ（すべてのモデルで共通）
         params = {
-            "model": model,
+            "model": actual_model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Create a web application that: {query}"}
@@ -62,8 +69,11 @@ def generate_openai(query, model):
             "stream": False
         }
         
-        # o3-mini以外のモデルの場合は追加パラメータを設定
-        if not model.startswith("o3-"):
+        # o3-mini-highの場合はreasoning_effortを設定
+        if model in ("openai:o3-mini-high", "o3-mini-high"):
+            params["reasoning_effort"] = "high"
+        # o3系以外のモデルの場合は追加パラメータを設定
+        elif not actual_model.startswith("o3-"):
             params.update({
                 "max_tokens": 2048,
                 "temperature": 0.7
@@ -74,7 +84,7 @@ def generate_openai(query, model):
         response_text = response.choices[0].message.content
         code = remove_code_block(response_text)
         preview = send_to_preview(code)
-        logger.info(f"Successfully completed OpenAI generation with {model}")
+        logger.info(f"Successfully completed OpenAI generation with {model} ({actual_model})")
         return code, preview
     except Exception as e:
         logger.error(f"Error in OpenAI generation: {str(e)}")
@@ -513,9 +523,6 @@ def build_interface():
                     value=[
                         INTEGRATED_MODELS[0], 
                         INTEGRATED_MODELS[1],
-                        INTEGRATED_MODELS[2],
-                        INTEGRATED_MODELS[3],
-                        INTEGRATED_MODELS[4],
                     ],
                     multiselect=True,
                     label="使用するモデルを選択",
