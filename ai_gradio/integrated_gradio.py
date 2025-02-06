@@ -132,9 +132,9 @@ def generate_gemini(query, model):
     try:
         load_dotenv()
         
-        api_key = os.environ.get("GOOGLE_API_KEY")
+        api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable is not set.")
+            raise ValueError("GEMINI_API_KEY environment variable is not set.")
         
         import google.generativeai as genai
         genai.configure(api_key=api_key)
