@@ -37,8 +37,35 @@ INTEGRATED_MODELS = [
     # "deepseek:deepseek-r1",
 ]
 
+# デフォルトのシステムプロンプト（Webアプリ生成用）
+DEFAULT_WEBAPP_SYSTEM_PROMPT = """You are an expert web developer. When asked to create a web application:
+1. Always respond with HTML code wrapped in ```html code blocks
+2. Include necessary CSS within <style> tags
+3. Include necessary JavaScript within <script> tags
+4. Ensure the code is complete and self-contained
+5. Add helpful comments explaining key parts of the code
+6. Focus on creating a functional and visually appealing result"""
+
+# 通常テキスト応答用のシステムプロンプト
+DEFAULT_TEXT_SYSTEM_PROMPT = """Before coding, make a plan inside a <thinking> tag.
+1. Identify core requirement
+2. Consider 3 implementation approaches
+3. Choose simplest that meets needs
+4. Verify with these questions:
+   - Can this be split into smaller functions?
+   - Are there unnecessary abstractions?
+   - Will this be clear to a junior dev?
+
+For example:
+<thinking>
+Let me think through this step by step.
+...
+</thinking>
+
+You are a helpful assistant. Provide concise and informative answers to user queries."""
+
 # 各provider毎のLLM生成関数の実装を更新
-def generate_openai(query, model):
+def generate_openai(query, model, system_prompt, prompt_type):
     try:
         logger.info(f"Starting OpenAI generation with model {model}")
         api_key = os.environ.get("OPENAI_API_KEY")
@@ -47,13 +74,7 @@ def generate_openai(query, model):
         
         client = OpenAI(api_key=api_key)
         
-        system_prompt = """You are an expert web developer. When asked to create a web application:
-1. Always respond with HTML code wrapped in ```html code blocks
-2. Include necessary CSS within <style> tags
-3. Include necessary JavaScript within <script> tags
-4. Ensure the code is complete and self-contained
-5. Add helpful comments explaining key parts of the code
-6. Focus on creating a functional and visually appealing result"""
+        # system_prompt を使用 (引数として受け取る)
         
         # モデル名とパラメータの処理
         if model in ("openai:o3-mini-high", "o3-mini-high"):
@@ -61,12 +82,18 @@ def generate_openai(query, model):
         else:
             actual_model = model.replace("openai:", "")
         
+        # prompt_type に応じて user メッセージを設定する
+        if prompt_type == "Web App":
+            user_msg = f"Create a web application that: {query}"
+        else:
+            user_msg = query
+        
         # 基本パラメータ（すべてのモデルで共通）
         params = {
             "model": actual_model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Create a web application that: {query}"}
+                {"role": "user", "content": user_msg}
             ],
             "stream": False
         }
@@ -93,7 +120,7 @@ def generate_openai(query, model):
         err = f"Error in OpenAI: {str(e)}"
         return err, f"<div style='padding: 8px;color:red;'>{err}</div>"
 
-def generate_anthropic(query, model):
+def generate_anthropic(query, model, system_prompt, prompt_type):
     try:
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
@@ -102,21 +129,18 @@ def generate_anthropic(query, model):
         from anthropic import Anthropic
         client = Anthropic(api_key=api_key)
         
-        # システムプロンプトを改善
-        system_prompt = """You are an expert web developer. Please follow these guidelines:
-1. Always wrap your HTML code in ```html code blocks
-2. Include all necessary CSS and JavaScript within the HTML file
-3. Write clean, modern, and responsive code
-4. Add clear comments explaining the implementation
-5. Focus on creating a functional and visually appealing result
-6. Test that all interactive elements work properly"""
+        # システムプロンプトを改善 (引数を使用)
         
+        if prompt_type == "Web App":
+            content = f"{system_prompt}\n\nCreate a web application that: {query}"
+        else:
+            content = f"{system_prompt}\n\n{query}"
         response = client.messages.create(
             model=model,
             max_tokens=2048,
             messages=[{
                 "role": "user",
-                "content": f"{system_prompt}\n\nCreate a web application that: {query}"
+                "content": content
             }]
         )
         
@@ -128,7 +152,7 @@ def generate_anthropic(query, model):
         err = f"Error in Anthropic: {str(e)}"
         return err, f"<div style='padding: 8px;color:red;'>{err}</div>"
 
-def generate_gemini(query, model):
+def generate_gemini(query, model, system_prompt, prompt_type):
     try:
         load_dotenv()
         
@@ -141,19 +165,17 @@ def generate_gemini(query, model):
         
         model = genai.GenerativeModel(model_name=model)
         
-        system_prompt = """As an expert web developer, please follow these rules:
-1. Generate complete HTML code wrapped in ```html blocks
-2. Include all CSS and JavaScript within the HTML file
-3. Write modern, responsive, and well-structured code
-4. Add descriptive comments for maintainability
-5. Ensure all interactive features are properly implemented
-6. Focus on both functionality and visual appeal"""
+        # システムプロンプト (引数を使用)
         
+        if prompt_type == "Web App":
+            last_message = f"Create a web application that: {query}"
+        else:
+            last_message = query
         response = model.generate_content(
             [
                 {"role": "user", "parts": [{"text": system_prompt}]},
                 {"role": "model", "parts": [{"text": "I understand and will follow these guidelines."}]},
-                {"role": "user", "parts": [{"text": f"Create a web application that: {query}"}]}
+                {"role": "user", "parts": [{"text": last_message}]}
             ],
             stream=False
         )
@@ -166,7 +188,7 @@ def generate_gemini(query, model):
         err = f"Error in Gemini: {str(e)}"
         return err, f"<div style='padding: 8px;color:red;'>{err}</div>"
 
-def generate_deepseek(query, model):
+def generate_deepseek(query, model, system_prompt, prompt_type):
     try:
         # DeepSeek APIキーの取得
         api_key = os.environ.get("DEEPSEEK_API_KEY")
@@ -178,12 +200,16 @@ def generate_deepseek(query, model):
             base_url="https://api.deepseek.com/v1"
         )
         
-        # DeepSeek API 呼び出し
+        # DeepSeek API 呼び出し (system_promptを使用)
+        if prompt_type == "Web App":
+            user_msg = f"Create a web application that: {query}"
+        else:
+            user_msg = query
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "You are an expert programmer. Write clean, efficient code."},
-                {"role": "user", "content": query}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg}
             ],
             temperature=0.7,
             max_tokens=2048,
@@ -228,44 +254,44 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 # 非同期のLLM生成関数を更新
-async def async_generate_openai(query, model):
+async def async_generate_openai(query, model, system_prompt, prompt_type):
     try:
         # 同期的な generate_openai を asyncio.to_thread で実行し、並列化
-        return await asyncio.to_thread(generate_openai, query, model)
+        return await asyncio.to_thread(generate_openai, query, model, system_prompt, prompt_type)
     except Exception as e:
         logger.error(f"Error in async OpenAI generation: {str(e)}")
         return (f"Error in OpenAI: {str(e)}",
                 f"<div style='padding: 8px;color:red;'>Error in OpenAI: {str(e)}</div>")
 
-async def async_generate_anthropic(query, model):
+async def async_generate_anthropic(query, model, system_prompt, prompt_type):
     try:
         # 同期的な generate_anthropic を asyncio.to_thread で実行し、並列化
-        return await asyncio.to_thread(generate_anthropic, query, model)
+        return await asyncio.to_thread(generate_anthropic, query, model, system_prompt, prompt_type)
     except Exception as e:
         logger.error(f"Error in async Anthropic generation: {str(e)}")
         return (f"Error in Anthropic: {str(e)}",
                 f"<div style='padding: 8px;color:red;'>Error in Anthropic: {str(e)}</div>")
 
-async def async_generate_gemini(query, model):
+async def async_generate_gemini(query, model, system_prompt, prompt_type):
     try:
         # 同期的な generate_gemini を asyncio.to_thread で実行し、並列化
-        return await asyncio.to_thread(generate_gemini, query, model)
+        return await asyncio.to_thread(generate_gemini, query, model, system_prompt, prompt_type)
     except Exception as e:
         logger.error(f"Error in async Gemini generation: {str(e)}")
         return (f"Error in Gemini: {str(e)}",
                 f"<div style='padding: 8px;color:red;'>Error in Gemini: {str(e)}</div>")
 
-async def async_generate_deepseek(query, model):
+async def async_generate_deepseek(query, model, system_prompt, prompt_type):
     try:
         # 同期的な generate_deepseek を asyncio.to_thread で実行し、並列化
-        return await asyncio.to_thread(generate_deepseek, query, model)
+        return await asyncio.to_thread(generate_deepseek, query, model, system_prompt, prompt_type)
     except Exception as e:
         logger.error(f"Error in async DeepSeek generation: {str(e)}")
         return (f"Error in DeepSeek: {str(e)}",
                 f"<div style='padding: 8px;color:red;'>Error in DeepSeek: {str(e)}</div>")
 
 # 統合生成関数を簡素化
-async def generate_parallel(query, selected_models):
+async def generate_parallel(query, selected_models, system_prompt, prompt_type):
     logger.info(f"Received generation request - Query: {query}")
     logger.info(f"Selected models: {selected_models}")
     
@@ -283,13 +309,13 @@ async def generate_parallel(query, selected_models):
             logger.info(f"Preparing task for {full_model}")
             
             if provider == "openai":
-                task = async_generate_openai(query, model)
+                task = async_generate_openai(query, model, system_prompt, prompt_type)
             elif provider == "anthropic":
-                task = async_generate_anthropic(query, model)
+                task = async_generate_anthropic(query, model, system_prompt, prompt_type)
             elif provider == "gemini":
-                task = async_generate_gemini(query, model)
+                task = async_generate_gemini(query, model, system_prompt, prompt_type)
             elif provider == "deepseek":
-                task = async_generate_deepseek(query, model)
+                task = async_generate_deepseek(query, model, system_prompt, prompt_type)
             else:
                 logger.error(f"Unknown provider: {full_model}")
                 continue
@@ -303,7 +329,9 @@ async def generate_parallel(query, selected_models):
     results = []
     if tasks:
         completed_tasks = await asyncio.gather(*(task for _, task in tasks))
-        for (full_model, _), (code, preview) in zip(tasks, completed_tasks):
+        for (full_model, _), result in zip(tasks, completed_tasks):
+            # await で結果を取り出してからリストに追加
+            code, preview = result
             results.append((full_model, code, preview))
 
     # HTMLの生成
@@ -531,6 +559,49 @@ def build_interface():
                     label="使用するモデルを選択",
                     info="複数のモデルを選択できます"
                 )
+
+                # システムプロンプト選択ラジオボタン
+                prompt_type = gr.Radio(
+                    ["Web App", "Text"],  # 選択肢
+                    label="Prompt Type",
+                    value="Web App",  # デフォルト値を "Web App" に設定
+                    interactive=True
+                )
+
+                # システムプロンプト入力欄 (Web App 用, Text用)
+                system_prompt_webapp_textbox = gr.Textbox(
+                    placeholder="Enter system prompt for web app generation...",
+                    label="System Prompt (Web App)",
+                    lines=5,
+                    value=DEFAULT_WEBAPP_SYSTEM_PROMPT,  # デフォルトのプロンプトを設定
+                    visible=True  # 最初は表示
+                )
+                system_prompt_text_textbox = gr.Textbox(
+                    placeholder="Enter system prompt for text generation...",
+                    label="System Prompt (Text)",
+                    lines=5,
+                    value=DEFAULT_TEXT_SYSTEM_PROMPT,  # デフォルトのプロンプトを設定
+                    visible=False  # 最初は非表示
+                )
+                
+                # system_prompt_webapp_textbox が変更されたときに prompt_type も "Web App" に設定
+                system_prompt_webapp_textbox.change(lambda: "Web App", inputs=[], outputs=[prompt_type])
+                # system_prompt_text_textbox が変更されたときに prompt_type も "Text" に設定
+                system_prompt_text_textbox.change(lambda: "Text", inputs=[], outputs=[prompt_type])
+
+                # プロンプトタイプに基づいて表示を切り替える関数
+                def switch_prompt_visibility(prompt_type):
+                    if prompt_type == "Web App":
+                        return gr.update(visible=True), gr.update(visible=False)  # Web App 用を表示、Text用を非表示
+                    else:
+                        return gr.update(visible=False), gr.update(visible=True) # Web App 用を非表示、Text用を表示
+
+                # ラジオボタンが変更されたときのイベントハンドラ
+                prompt_type.change(
+                    switch_prompt_visibility,
+                    inputs=[prompt_type],
+                    outputs=[system_prompt_webapp_textbox, system_prompt_text_textbox])
+
                 generate_btn = gr.Button(
                     "Generate",
                     variant="primary",
@@ -543,10 +614,22 @@ def build_interface():
                     container=True,
                     show_label=True
                 )
-        
+
+        # プロンプトタイプに応じて system_prompt を決定する関数
+        def get_system_prompt(prompt_type, webapp_prompt, text_prompt):
+            if prompt_type == "Web App":
+                return webapp_prompt  # 編集された、またはデフォルトのWeb App用プロンプト
+            else:
+                return text_prompt  # 編集された、またはデフォルトのText用プロンプト
+
+        # ボタンクリック時の処理
+        async def run_generate(q, m, pt, wp, tp):
+            # get_system_promptでシステムプロンプトを取得し、prompt_type(pt)も渡す
+            return await generate_parallel(q, m, get_system_prompt(pt, wp, tp), pt)
+
         generate_btn.click(
-            fn=generate_parallel,
-            inputs=[query_input, model_select],
+            fn=run_generate,
+            inputs=[query_input, model_select, prompt_type, system_prompt_webapp_textbox, system_prompt_text_textbox],
             outputs=output_html
         )
     return interface
