@@ -21,16 +21,18 @@ logger = setup_logging()
 from dotenv import load_dotenv
 load_dotenv()  # 追加: .envファイルから環境変数をグローバルに読み込みます
 
-# 定数: 各provider:モデル名のリスト (OpenAIは gpt-4o, gpt-4o-mini, o3-mini のみ)
+# 定数: 各provider:モデル名のリスト
 INTEGRATED_MODELS = [
     "openai:o3-mini",
     "openai:o3-mini-high",
     "openai:gpt-4o-mini", 
-    # "openai:gpt-4o", 
+    "openai:gpt-4o", 
     "anthropic:claude-3-5-sonnet-20241022", 
-    "gemini:gemini-2.0-flash-exp",
-    "gemini:gemini-exp-1206",
-    # "gemini:gemini-2.0-flash-thinking-exp",
+    "gemini:gemini-2.0-flash",
+    "gemini:gemini-2.0-flash-lite-preview-02-05",
+    "gemini:gemini-2.0-pro-exp-02-05",
+    "gemini:gemini-2.0-flash-thinking-exp-01-21",
+    # "gemini:gemini-exp-1206",
     # "gemini:gemini-1.5-pro", 
     # "deepseek:deepseek-r1",
 ]
@@ -522,7 +524,8 @@ def build_interface():
                     choices=INTEGRATED_MODELS,
                     value=[
                         INTEGRATED_MODELS[0], 
-                        INTEGRATED_MODELS[1],
+                        INTEGRATED_MODELS[4],
+                        INTEGRATED_MODELS[7],
                     ],
                     multiselect=True,
                     label="使用するモデルを選択",

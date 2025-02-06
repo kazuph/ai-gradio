@@ -26,16 +26,20 @@ Set the following environment variables in your `.env` file:
 ```bash
 OPENAI_API_KEY=your_openai_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
-GOOGLE_API_KEY=your_google_api_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ## 📝 Usage
 
+以下のいずれかのコマンドでアプリケーションを起動できます：
+
 ```bash
+uv run start        # 推奨
+# または
 uv run python ai_gradio
 ```
 
-Open http://localhost:7860 in your browser and:
+Open http://localhost:7861 in your browser and:
 
 1. Enter the specifications for your desired web application
 2. Select the AI models you want to use

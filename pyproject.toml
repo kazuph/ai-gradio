@@ -131,6 +131,9 @@ replicate = [
     "replicate>=1.0.4"
 ]
 
+[project.scripts]
+start = "ai_gradio.__main__:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
 
