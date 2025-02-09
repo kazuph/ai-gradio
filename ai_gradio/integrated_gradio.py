@@ -380,49 +380,69 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
     <style>
         :root {
             --card-bg: #ffffff;
-            --border-color: #e0e0e0;
-            --header-bg: #f5f5f5;
+            --border-color: #dcdcdc;
+            --header-bg: #f0f0f0;
             --code-bg: #1e1e1e;
-            --text-color: #333333;
+            --text-color: #2c2c2c;
             --preview-bg: #ffffff;
-            --preview-border: #e0e0e0;
-            --button-bg: rgba(0, 0, 0, 0.1);
-            --button-hover: rgba(0, 0, 0, 0.2);
-            --button-color: #333333;
-            /* システムフォントスタックを使用 */
-            --system-fonts: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 
-                          Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            --preview-border: #dcdcdc;
+            --button-bg: #e0e0e0;
+            --button-hover: #d0d0d0;
+            --button-color: #2c2c2c;
+            --header-title-color: #2c2c2c;
+            --results-bg: #ffffff;
         }
 
-        /* 全体のフォント設定 */
-        * {
-            font-family: var(--system-fonts);
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --card-bg: #2c2c2c;
+                --border-color: #404040;
+                --header-bg: #363636;
+                --code-bg: #1e1e1e;
+                --text-color: #ffffff;
+                --preview-bg: #ffffff;  /* プレビューは白のまま */
+                --preview-border: #404040;
+                --button-bg: #404040;
+                --button-hover: #505050;
+                --button-color: #ffffff;
+                --header-title-color: #ffffff;
+                --results-bg: #1a1a1a;
+            }
         }
 
         .results-container {
-            width: 100%;
+            background: var(--results-bg);
             padding: 20px;
-            overflow-x: auto;
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            font-family: var(--system-fonts);
-        }
-
-        .results-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            justify-content: center;
+            border-radius: 8px;
+            margin-top: 20px;
         }
 
         .result-card {
-            width: 800px;
-            min-width: 800px;
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             overflow: hidden;
-            margin-bottom: 24px;
+            margin-bottom: 32px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .code-content {
+            background: var(--code-bg);
+            padding: 16px;
+            margin: 16px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .code-content pre {
+            margin: 0;
+            padding: 0;
+        }
+
+        .code-content code {
+            font-family: 'Source Code Pro', monospace;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
         .card-header {
@@ -432,42 +452,38 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
             padding: 16px;
             background: var(--header-bg);
             border-bottom: 1px solid var(--border-color);
-            color: var(--text-color);
+            color: var(--header-title-color);
+            font-weight: 500;
+        }
+
+        .header-title {
+            color: var(--header-title-color);
+            font-size: 1.1em;
+        }
+
+        .header-title strong {
+            color: var(--header-title-color);
+            font-weight: 600;
         }
 
         .preview-container {
             width: 100%;
-            aspect-ratio: 1;
+            min-height: 600px;
+            max-height: 1200px;
             position: relative;
             background: var(--preview-bg);
             border: 1px solid var(--preview-border);
             border-radius: 4px;
             margin: 16px;
+            overflow-y: auto;
         }
 
         .preview-container iframe {
             width: 100%;
             height: 100%;
+            min-height: 600px;
             border: none;
             background: var(--preview-bg);
-        }
-
-        .code-content {
-            display: none;
-            padding: 16px;
-            background: var(--code-bg);
-            max-height: 400px;
-            overflow-y: auto;
-            margin: 16px;
-            border-radius: 4px;
-        }
-
-        .code-content pre {
-            margin: 0;
-        }
-
-        .code-content code {
-            color: #e0e0e0;
         }
 
         .header-buttons {
@@ -488,10 +504,13 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .button-icon:hover {
             background: var(--button-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
         }
 
         .button-icon svg {
@@ -525,23 +544,24 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
                         <strong>{provider.upper()}</strong> - {model_name}
                     </div>
                     <div class='header-buttons'>
-                        <button class="button-icon" onclick="(function(){{ 
+                        <button class="button-icon" onclick="(function(){ 
                             var codeEl = document.getElementById('{model_id}_code'); 
-                            if (codeEl){{ 
+                            if (codeEl){ 
                                 codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none'); 
-                                if (codeEl.style.display === 'block' && window.Prism){{{{ Prism.highlightAll(); }}}} 
-                            }} 
-                        }})()" title="コードを表示/非表示">
+                                if (codeEl.style.display === 'block' && window.Prism){ Prism.highlightAll(); } 
+                            } 
+                        })()" title="コードを表示/非表示">
                             <svg viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
                             </svg>
                         </button>
-                        <button class="button-icon" onclick="(function(){{ 
-                            var iframe = document.getElementById('{model_id}_preview');
-                            if (iframe && iframe.contentWindow){{ 
-                                iframe.contentWindow.location.reload();
-                            }} 
-                        }})()" title="プレビューを更新">
+                        <button class="button-icon" onclick="(function(){ 
+                            var iframe = document.getElementById('{model_id}_preview'); 
+                            if (iframe){ 
+                                // iframe.contentWindow.location.reload() の代わりに、src を再代入します
+                                iframe.src = iframe.src; 
+                            } 
+                        })()" title="プレビューを更新">
                             <svg viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
                             </svg>
@@ -569,18 +589,50 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
 
 # 統合Gradioインターフェースの定義
 def build_interface():
-    # CSSでシステムフォントを全体に適用する
     custom_css = """
     * {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+
+    /* 結果出力エリアのスタイル */
+    .result-output {
+        min-height: 600px !important;
+        margin-bottom: 2rem;
+    }
+
+    /* プログレスバーのコンテナ */
+    .progress-container {
+        background: var(--neutral-100);
+        padding: 1rem;
+        border-radius: 8px;
+        min-height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* プログレスバーのスタイル */
+    .progress-bar {
+        height: 4px;
+        background: var(--primary-500);
+        border-radius: 2px;
+        animation: progress 2s infinite;
+    }
+
+    @keyframes progress {
+        0% { width: 0%; }
+        50% { width: 70%; }
+        100% { width: 100%; }
     }
     """
     with gr.Blocks(css=custom_css) as demo:
         gr.Markdown("# 🎨 AI Gradio Code Generator")
         
+        # 入力セクション
+        gr.Markdown("## 入力")
         with gr.Row():
+            # 左側のカラム
             with gr.Column(scale=1):
-                gr.Markdown("## 入力")
                 # テキスト入力エリア
                 query_input = gr.Textbox(
                     placeholder="作成したいWebアプリの仕様を記載してください",
@@ -600,11 +652,13 @@ def build_interface():
                     info="複数のモデルを選択できます"
                 )
 
+            # 右側のカラム
+            with gr.Column(scale=1):
                 # システムプロンプト選択ラジオボタン
                 prompt_type = gr.Radio(
-                    ["Web App", "Text"],  # 選択肢
+                    ["Web App", "Text"],
                     label="Prompt Type",
-                    value="Web App",  # デフォルト値を "Web App" に設定
+                    value="Web App",
                     interactive=True
                 )
 
@@ -613,47 +667,31 @@ def build_interface():
                     placeholder="Enter system prompt for web app generation...",
                     label="System Prompt (Web App)",
                     lines=5,
-                    value=DEFAULT_WEBAPP_SYSTEM_PROMPT,  # デフォルトのWeb App用プロンプトを設定
+                    value=DEFAULT_WEBAPP_SYSTEM_PROMPT,
                     visible=True
                 )
                 system_prompt_text_textbox = gr.Textbox(
                     placeholder="Enter system prompt for text generation...",
                     label="System Prompt (Text)",
                     lines=5,
-                    value=DEFAULT_TEXT_SYSTEM_PROMPT,  # デフォルトのプロンプトを設定
-                    visible=False  # 最初は非表示
+                    value=DEFAULT_TEXT_SYSTEM_PROMPT,
+                    visible=False
                 )
-                
-                # system_prompt_webapp_textbox が変更されたときに prompt_type も "Web App" に設定
-                system_prompt_webapp_textbox.change(lambda: "Web App", inputs=[], outputs=[prompt_type])
-                # system_prompt_text_textbox が変更されたときに prompt_type も "Text" に設定
-                system_prompt_text_textbox.change(lambda: "Text", inputs=[], outputs=[prompt_type])
 
-                # プロンプトタイプに基づいて表示を切り替える関数
-                def switch_prompt_visibility(prompt_type):
-                    if prompt_type == "Web App":
-                        return gr.update(visible=True), gr.update(visible=False)  # Web App 用を表示、Text用を非表示
-                    else:
-                        return gr.update(visible=False), gr.update(visible=True) # Web App 用を非表示、Text用を表示
+        # Generate ボタン
+        generate_btn = gr.Button(
+            "Generate",
+            variant="primary",
+            size="lg"
+        )
 
-                # ラジオボタンが変更されたときのイベントハンドラ
-                prompt_type.change(
-                    switch_prompt_visibility,
-                    inputs=[prompt_type],
-                    outputs=[system_prompt_webapp_textbox, system_prompt_text_textbox])
-
-                generate_btn = gr.Button(
-                    "Generate",
-                    variant="primary",
-                    size="lg"
-                )
-            with gr.Column(scale=2):
-                gr.Markdown("## 結果")
-                # 結果出力用のHTMLコンポーネント
-                output_html = gr.HTML(
-                    container=True,
-                    show_label=True
-                )
+        # 結果セクション
+        gr.Markdown("## 結果")
+        output_html = gr.HTML(
+            container=True,
+            show_label=True,
+            elem_classes="result-output"
+        )
 
         # プロンプトタイプに応じて system_prompt を決定する関数
         def get_system_prompt(prompt_type, webapp_prompt, text_prompt):
