@@ -8,6 +8,10 @@ load_dotenv()
 
 # integrated_gradio から必要な関数と定数をインポート
 from .integrated_gradio import generate_gemini, DEFAULT_TEXT_SYSTEM_PROMPT
+from .logging_config import setup_logging  # ロガーをインポート
+
+# ロガーの初期化
+logger = setup_logging()
 
 app = FastAPI()
 
@@ -22,7 +26,20 @@ async def llm_api(request: LLMRequest):
     リクエストの prompt を使って gemini-2.0-flash モデルで LLM 呼び出しを行い、
     結果のテキストをそのまま返します。
     """
-    default_model = "gemini-2.0-flash"
-    # prompt_type は "Text" を指定して、シンプルなテキスト応答とする
-    response_text, _ = generate_gemini(request.prompt, default_model, DEFAULT_TEXT_SYSTEM_PROMPT, "Text")
-    return response_text 
+    # リクエスト内容をログに記録
+    logger.info(f"LLM API Request - Prompt: {request.prompt}")
+    
+    try:
+        default_model = "gemini-2.0-flash"
+        # prompt_type は "Text" を指定して、シンプルなテキスト応答とする
+        response_text, _ = generate_gemini(request.prompt, default_model, DEFAULT_TEXT_SYSTEM_PROMPT, "Text")
+        
+        # 応答内容をログに記録（長い場合は最初の500文字のみ）
+        truncated_response = response_text[:500] + "..." if len(response_text) > 500 else response_text
+        logger.info(f"LLM API Response: {truncated_response}")
+        
+        return response_text
+    except Exception as e:
+        # エラーの場合もログに記録
+        logger.error(f"LLM API Error: {str(e)}")
+        raise 
