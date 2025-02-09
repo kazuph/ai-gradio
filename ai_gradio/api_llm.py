@@ -34,9 +34,8 @@ async def llm_api(request: LLMRequest):
         # prompt_type は "Text" を指定して、シンプルなテキスト応答とする
         response_text, _ = generate_gemini(request.prompt, default_model, DEFAULT_TEXT_SYSTEM_PROMPT, "Text")
         
-        # 応答内容をログに記録（長い場合は最初の500文字のみ）
-        truncated_response = response_text[:500] + "..." if len(response_text) > 500 else response_text
-        logger.info(f"LLM API Response: {truncated_response}")
+        # 応答内容をログに記録
+        logger.info(f"LLM API Response: {response_text}")
         
         return response_text
     except Exception as e:

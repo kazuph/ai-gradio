@@ -287,6 +287,35 @@ def send_to_preview(code, iframe_id=""):
         ></iframe>
     '''
 
+# 既存のsend_to_preview関数はそのままとして、以下に新しい関数 send_to_preview_react を追加
+
+def send_to_preview_react(react_code, container_id=""):
+    """
+    LLM が生成した React コンポーネントのコードを使ってプレビューを生成する関数です。
+    
+    ※ この実装は試作用であり、セキュリティ対策は最小限です。
+    
+    生成されたコードは、Reactコンポーネント（例: GeneratedComponent）が定義されている前提です。
+    Babel を利用して JSX をランタイムにコンパイルし、ReactDOM でレンダリングします。
+    """
+    if not container_id:
+        container_id = "react_preview"
+    html_react = f"""
+    <div id="{container_id}"></div>
+    <!-- React と ReactDOM の読み込み（開発用版） -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <!-- Babel の読み込み（JSXをランタイムコンパイルするため） -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 生成された React コンポーネントのコードを含むスクリプト -->
+    <script type="text/babel">
+    {react_code}
+    // 例: LLM により生成されたコード内で GeneratedComponent が定義されていると仮定
+    ReactDOM.render(<GeneratedComponent />, document.getElementById("{container_id}"));
+    </script>
+    """
+    return html_react
+
 # 既存のimportに追加
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -544,24 +573,24 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
                         <strong>{provider.upper()}</strong> - {model_name}
                     </div>
                     <div class='header-buttons'>
-                        <button class="button-icon" onclick="(function(){ 
+                        <button class="button-icon" onclick="(function(){{ 
                             var codeEl = document.getElementById('{model_id}_code'); 
-                            if (codeEl){ 
+                            if (codeEl){{ 
                                 codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none'); 
-                                if (codeEl.style.display === 'block' && window.Prism){ Prism.highlightAll(); } 
-                            } 
-                        })()" title="コードを表示/非表示">
+                                if (codeEl.style.display === 'block' && window.Prism){{ Prism.highlightAll(); }} 
+                            }} 
+                        }})()" title="コードを表示/非表示">
                             <svg viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
                             </svg>
                         </button>
-                        <button class="button-icon" onclick="(function(){ 
+                        <button class="button-icon" onclick="(function(){{ 
                             var iframe = document.getElementById('{model_id}_preview'); 
-                            if (iframe){ 
+                            if (iframe){{ 
                                 // iframe.contentWindow.location.reload() の代わりに、src を再代入します
                                 iframe.src = iframe.src; 
-                            } 
-                        })()" title="プレビューを更新">
+                            }} 
+                        }})()" title="プレビューを更新">
                             <svg viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
                             </svg>
