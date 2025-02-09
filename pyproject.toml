@@ -33,6 +33,25 @@ dependencies = [
     "numba==0.60.0",
     "python-dotenv",
     "modelscope-studio",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.1",
+    "openai>=1.58.1",
+    "google-generativeai>=0.8.3",
+    "anthropic<=0.45.2",
+    "transformers>=4.37.0",
+    "einops>=0.8.0",
+    "pyvips-binary>=8.16.0",
+    "pyvips>=2.2.3",
+    "torchvision>=0.18.1",
+    "langchain>=0.3.9",
+    "langchain-openai>=0.0.2",
+    "langchain-community>=0.0.10",
+    "langchain-core>=0.1.0",
+    "pydantic>=2.0.0,<3.0.0",
+    "requests>=2.31.0",
+    "huggingface-hub>=0.27.1",
+    "mistralai",
+    "replicate>=1.0.4"
 ]
 
 [project.urls]
@@ -46,97 +65,10 @@ dev = [
     "isort",
     "flake8"
 ]
-transformers = ["transformers>=4.37.0", "torch>=2.0.0", "accelerate>=0.27.0", "bitsandbytes>=0.41.0", "einops>=0.8.0", "Pillow>=10.4.0", "pyvips-binary>=8.16.0", "pyvips>=2.2.3", "torchvision>=0.18.1"]
-openai = ["openai>=1.58.1"]
-gemini = ["google-generativeai>=0.8.3", "google-genai==0.3.0"]
-crewai = [
-    "crewai>=0.1.0",
-    "langchain-openai>=0.0.2",
-    "crewai-tools>=0.0.1"
-]
-anthropic = [
-    "anthropic==0.45.2"
-]
-lumaai = ["lumaai>=0.0.3"]
-xai = ["openai>=1.58.1"]
-cohere = ["cohere>=5.0.0"]
-sambanova = ["openai>=1.58.1"]
-hyperbolic = ["openai>=1.58.1"]
-qwen = [
-    "openai>=1.58.1",
-]
-kokoro = [
-    "kokoro-onnx>=0.3.3",
-    "soundfile>=0.13.0",
-    "huggingface-hub>=0.27.1"
-]
-all = [
-    "openai>=1.58.1",
-    "google-generativeai",
-    "crewai>=0.1.0",
-    "langchain>=0.3.9",
-    "langchain-openai>=0.0.2",
-    "langchain-community>=0.0.10",
-    "anthropic<=0.45.2",
-    "lumaai>=0.0.3",
-    "cohere>=5.0.0",
-    "sambanova>=0.0.1",
-    "hyperbolic>=1.58.1",
-    "groq>=0.3.0",
-    "pydantic>=2.0.0,<3.0.0",
-    "langchain-openai>=0.0.2",
-    "langchain-community>=0.0.10",
-    "langchain-core>=0.1.0",
-    "tavily-python>=0.3.0",
-    "requests>=2.31.0",
-    "kokoro-onnx>=0.1.0",
-    "soundfile>=0.12.0",
-    "huggingface-hub>=0.20.0"
-]
-groq = ["openai>=1.58.1"]
-fireworks = ["openai>=1.58.1"]
-together = ["openai>=1.58.1"]
-deepseek = ["openai>=1.58.1"]
-smolagents = ["smolagents>=0.1.3"]
-jupyter = [
-    "nbformat>=5.9.0",
-    "nbconvert>=7.16.0",
-    "e2b-code-interpreter>=0.5.0",
-    "huggingface-hub>=0.20.0",
-]
-
-langchain = [
-    "langchain",
-    "langchain-community",
-    "langchain-core",
-    "tavily-python",
-    "langchain-openai"
-]
-
-mistral = [
-    "mistralai"
-]
-
-nvidia = [
-    "openai>=1.58.1"
-]
-
-minimax = ["requests>=2.31.0"]
-
-perplexity = [
-    "openai>=1.58.1"
-]
-
-replicate = [
-    "replicate>=1.0.4"
-]
 
 [project.scripts]
 start = "ai_gradio.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ai_gradio"]
-
-[tool.poetry.dependencies]
-python-dotenv = "^1.0.0"
 

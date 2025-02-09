@@ -21,6 +21,9 @@ logger = setup_logging()
 from dotenv import load_dotenv
 load_dotenv()  # 追加: .envファイルから環境変数をグローバルに読み込みます
 
+# 既存のimportの直後に追加
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:7860")
+
 # 定数: 各provider:モデル名のリスト
 INTEGRATED_MODELS = [
     "openai:o3-mini",
@@ -39,12 +42,17 @@ INTEGRATED_MODELS = [
 
 # デフォルトのシステムプロンプト（Webアプリ生成用）
 DEFAULT_WEBAPP_SYSTEM_PROMPT = """You are an expert web developer. When asked to create a web application:
-1. Always respond with HTML code wrapped in ```html code blocks
-2. Include necessary CSS within <style> tags
-3. Include necessary JavaScript within <script> tags
-4. Ensure the code is complete and self-contained
-5. Add helpful comments explaining key parts of the code
-6. Focus on creating a functional and visually appealing result"""
+1. Always respond with HTML code wrapped in ```html code blocks.
+2. Include necessary CSS within <style> tags.
+3. Include necessary JavaScript within <script> tags.
+4. Ensure the code is complete and self-contained.
+5. Add helpful comments explaining key parts of the code.
+6. Focus on creating a functional and visually appealing result.
+7. Additionally, an internal LLM API is available at POST /api/llm.
+   - To use this API, send a JSON object with a 'prompt' field containing your textual prompt.
+   - The server will relay your request using the default gemini-2.0-flash model and respond with plain text.
+   - When calling the API from client-side JavaScript, use a complete URL (e.g., `/api/llm`) or access the application via http://localhost:7860 so that the relative URL is properly resolved.
+   - Ensure you include proper error handling when invoking this API."""
 
 # 通常テキスト応答用のシステムプロンプト
 DEFAULT_TEXT_SYSTEM_PROMPT = """Before coding, make a plan inside a <thinking> tag.
@@ -233,11 +241,41 @@ def remove_code_block(text):
         return match.group(1).strip()
     return text.strip()
 
+# send_to_preview関数を更新
 def send_to_preview(code, iframe_id=""):
-    """HTMLプレビューを生成する"""
-    # Clean the code and create base64 encoded data URI
+    """
+    HTMLプレビューを生成する関数です。
+    生成されたコードに <base> タグを追加し、iframe 内での相対 URL の解決を保証します。
+    """
     clean_code = code.replace("```html", "").replace("```", "").strip()
-    encoded_html = base64.b64encode(clean_code.encode('utf-8')).decode('utf-8')
+    
+    # 既にHTML文書でなければ、<base>タグ付きのHTMLテンプレートでラップ
+    if "<html" not in clean_code.lower():
+        wrapped_code = f"""<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <base href="{BASE_URL}/">
+  </head>
+  <body>
+    {clean_code}
+  </body>
+</html>"""
+    else:
+        # 既存のHTMLドキュメントの場合は<head>タグ内に<base>タグを追加
+        if "<head>" in clean_code.lower():
+            wrapped_code = clean_code.replace(
+                "<head>",
+                f'<head>\n    <base href="{BASE_URL}/">'
+            )
+        else:
+            # <head>タグがない場合は追加
+            wrapped_code = clean_code.replace(
+                "<html>",
+                f'<html>\n  <head>\n    <base href="{BASE_URL}/">\n  </head>'
+            )
+
+    encoded_html = base64.b64encode(wrapped_code.encode('utf-8')).decode('utf-8')
     data_uri = f"data:text/html;charset=utf-8;base64,{encoded_html}"
     
     id_attribute = f' id="{iframe_id}"' if iframe_id else ""
@@ -351,21 +389,14 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
             --button-bg: rgba(0, 0, 0, 0.1);
             --button-hover: rgba(0, 0, 0, 0.2);
             --button-color: #333333;
+            /* システムフォントスタックを使用 */
+            --system-fonts: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 
+                          Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
         }
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --card-bg: #2d2d2d;
-                --border-color: #444444;
-                --header-bg: #1a1a1a;
-                --code-bg: #1e1e1e;
-                --text-color: #e0e0e0;
-                --preview-bg: #ffffff;
-                --preview-border: #444444;
-                --button-bg: rgba(255, 255, 255, 0.1);
-                --button-hover: rgba(255, 255, 255, 0.2);
-                --button-color: #ffffff;
-            }
+        /* 全体のフォント設定 */
+        * {
+            font-family: var(--system-fonts);
         }
 
         .results-container {
@@ -374,6 +405,7 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
             overflow-x: auto;
             background-color: var(--card-bg);
             color: var(--text-color);
+            font-family: var(--system-fonts);
         }
 
         .results-grid {
@@ -537,7 +569,15 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
 
 # 統合Gradioインターフェースの定義
 def build_interface():
-    with gr.Blocks(title="統合AI Code Generator", theme=gr.themes.Soft()) as interface:
+    # CSSでシステムフォントを全体に適用する
+    custom_css = """
+    * {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    """
+    with gr.Blocks(css=custom_css) as demo:
+        gr.Markdown("# 🎨 AI Gradio Code Generator")
+        
         with gr.Row():
             with gr.Column(scale=1):
                 gr.Markdown("## 入力")
@@ -573,8 +613,8 @@ def build_interface():
                     placeholder="Enter system prompt for web app generation...",
                     label="System Prompt (Web App)",
                     lines=5,
-                    value=DEFAULT_WEBAPP_SYSTEM_PROMPT,  # デフォルトのプロンプトを設定
-                    visible=True  # 最初は表示
+                    value=DEFAULT_WEBAPP_SYSTEM_PROMPT,  # デフォルトのWeb App用プロンプトを設定
+                    visible=True
                 )
                 system_prompt_text_textbox = gr.Textbox(
                     placeholder="Enter system prompt for text generation...",
@@ -632,7 +672,7 @@ def build_interface():
             inputs=[query_input, model_select, prompt_type, system_prompt_webapp_textbox, system_prompt_text_textbox],
             outputs=output_html
         )
-    return interface
+    return demo
 
 if __name__ == "__main__":
     demo = build_interface()
