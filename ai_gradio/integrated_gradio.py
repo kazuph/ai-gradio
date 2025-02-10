@@ -685,7 +685,7 @@ def build_interface():
                 query_input = gr.Textbox(
                     placeholder="作成したいWebアプリの仕様を記載してください",
                     label="Request",
-                    lines=3
+                    lines=8
                 )
                 # マルチセレクト: 統合対象のモデル一覧
                 model_select = gr.Dropdown(
