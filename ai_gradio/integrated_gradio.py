@@ -16,6 +16,8 @@ from ai_gradio.logging_config import setup_logging
 
 # ロガーの初期化
 logger = setup_logging()
+import asyncio
+generation_lock = asyncio.Lock()  # 生成処理の重複実行を防ぐためのグローバルロック
 
 # 既存のインポートに追加
 from dotenv import load_dotenv
@@ -31,9 +33,9 @@ INTEGRATED_MODELS = [
     "openai:gpt-4o-mini", 
     "openai:gpt-4o", 
     "anthropic:claude-3-5-sonnet-20241022", 
+    "gemini:gemini-2.0-pro-exp-02-05",
     "gemini:gemini-2.0-flash",
     "gemini:gemini-2.0-flash-lite-preview-02-05",
-    "gemini:gemini-2.0-pro-exp-02-05",
     "gemini:gemini-2.0-flash-thinking-exp-01-21",
     # "gemini:gemini-exp-1206",
     # "gemini:gemini-1.5-pro", 
@@ -336,7 +338,6 @@ def send_to_preview_react(react_code, container_id=""):
     return html_react
 
 # 既存のimportに追加
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 # 非同期のLLM生成関数を更新
@@ -377,9 +378,58 @@ async def async_generate_deepseek(query, model, system_prompt, prompt_type):
                 f"<div style='padding: 8px;color:red;'>Error in DeepSeek: {str(e)}</div>")
 
 # 統合生成関数を簡素化
-async def generate_parallel(query, selected_models, system_prompt, prompt_type):
+async def get_implementation_plan(query, prompt_type):
+    """o3-miniを使用して実装計画を生成する"""
+    try:
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set.")
+        
+        client = OpenAI(api_key=api_key)
+        
+        planning_prompt = """あなたは優秀なソフトウェアアーキテクトです。
+以下の要件に対する実装計画を作成してください。
+
+1. 要件の分析
+2. 必要な機能の洗い出し
+3. 実装手順の詳細化
+4. 注意点やベストプラクティス
+
+回答は以下のフォーマットで行ってください：
+
+<実装計画>
+[ここに計画の詳細を記載]
+</実装計画>"""
+
+        if prompt_type == "Web App":
+            user_msg = f"以下のWebアプリケーションの実装計画を作成してください：{query}"
+        else:
+            user_msg = f"以下の機能の実装計画を作成してください：{query}"
+        
+        response = client.chat.completions.create(
+            model="o3-mini",
+            messages=[
+                {"role": "system", "content": planning_prompt},
+                {"role": "user", "content": user_msg}
+            ],
+            stream=False
+        )
+        
+        plan = response.choices[0].message.content
+        return plan
+    except Exception as e:
+        logger.error(f"Error in implementation planning: {str(e)}")
+        return f"Error in planning: {str(e)}"
+
+async def generate_parallel(query, selected_models, system_prompt, prompt_type, use_planning=False):
     logger.info(f"Received generation request - Query: {query}")
     logger.info(f"Selected models: {selected_models}")
+    
+    implementation_plan = ""
+    if use_planning:
+        implementation_plan = await get_implementation_plan(query, prompt_type)
+        # 実装計画をシステムプロンプトに追加
+        system_prompt = f"{system_prompt}\n\n実装計画：\n{implementation_plan}"
     
     # 同時実行数を制御するセマフォを作成（必要に応じて数値を調整）
     semaphore = asyncio.Semaphore(5)  # 同時に5つまで実行可能
@@ -420,159 +470,11 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type):
             code, preview = result
             results.append((full_model, code, preview))
 
-    # HTMLの生成
+    # HTMLの生成（plan_htmlを削除）
     grid_html = """
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-markup.min.js"></script>
-    <style>
-        :root {
-            --card-bg: #ffffff;
-            --border-color: #dcdcdc;
-            --header-bg: #f0f0f0;
-            --code-bg: #1e1e1e;
-            --text-color: #2c2c2c;
-            --preview-bg: #ffffff;
-            --preview-border: #dcdcdc;
-            --button-bg: #e0e0e0;
-            --button-hover: #d0d0d0;
-            --button-color: #2c2c2c;
-            --header-title-color: #2c2c2c;
-            --results-bg: #ffffff;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --card-bg: #2c2c2c;
-                --border-color: #404040;
-                --header-bg: #363636;
-                --code-bg: #1e1e1e;
-                --text-color: #ffffff;
-                --preview-bg: #ffffff;  /* プレビューは白のまま */
-                --preview-border: #404040;
-                --button-bg: #404040;
-                --button-hover: #505050;
-                --button-color: #ffffff;
-                --header-title-color: #ffffff;
-                --results-bg: #1a1a1a;
-            }
-        }
-
-        .results-container {
-            background: var(--results-bg);
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-
-        .result-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 32px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .code-content {
-            background: var(--code-bg);
-            padding: 16px;
-            margin: 16px;
-            border-radius: 4px;
-            overflow-x: auto;
-        }
-
-        .code-content pre {
-            margin: 0;
-            padding: 0;
-        }
-
-        .code-content code {
-            font-family: 'Source Code Pro', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px;
-            background: var(--header-bg);
-            border-bottom: 1px solid var(--border-color);
-            color: var(--header-title-color);
-            font-weight: 500;
-        }
-
-        .header-title {
-            color: var(--header-title-color);
-            font-size: 1.1em;
-        }
-
-        .header-title strong {
-            color: var(--header-title-color);
-            font-weight: 600;
-        }
-
-        .preview-container {
-            width: 100%;
-            min-height: 600px;
-            max-height: 1200px;
-            position: relative;
-            background: var(--preview-bg);
-            border: 1px solid var(--preview-border);
-            border-radius: 4px;
-            margin: 16px;
-            overflow-y: auto;
-        }
-
-        .preview-container iframe {
-            width: 100%;
-            height: 100%;
-            min-height: 600px;
-            border: none;
-            background: var(--preview-bg);
-        }
-
-        .header-buttons {
-            display: flex;
-            gap: 8px;
-        }
-
-        .button-icon {
-            width: 32px;
-            height: 32px;
-            padding: 6px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            background: var(--button-bg);
-            color: var(--button-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .button-icon:hover {
-            background: var(--button-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-        }
-
-        .button-icon svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
-        @media (max-width: 768px) {
-            .results-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
     <div class='results-container'>
         <div class='results-grid'>
     """
@@ -672,6 +574,62 @@ def build_interface():
         50% { width: 70%; }
         100% { width: 100%; }
     }
+
+    /* 実装計画セクションのスタイル */
+    .implementation-plan {
+        margin: 20px 0;
+        padding: 20px;
+        border-radius: 8px;
+        background: var(--neutral-50);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .implementation-plan {
+            background: var(--neutral-900);
+            color: var(--neutral-100);
+        }
+    }
+
+    /* 結果カードのスタイル更新 */
+    .result-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 32px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .preview-container {
+        width: 100%;
+        min-height: 600px !important;  /* 最小高さを設定 */
+        height: 800px;  /* デフォルトの高さを設定 */
+        position: relative;
+        background: var(--preview-bg);
+        border: 1px solid var(--preview-border);
+        border-radius: 4px;
+        margin: 16px;
+        overflow: auto;  /* スクロール可能に */
+    }
+
+    .preview-container iframe {
+        width: 100%;
+        height: 100%;
+        min-height: 600px !important;  /* iframeの最小高さも設定 */
+        border: none;
+        background: var(--preview-bg);
+    }
+
+    /* コードブロックの高さも調整 */
+    .code-content {
+        background: var(--code-bg);
+        padding: 16px;
+        margin: 16px;
+        border-radius: 4px;
+        overflow-x: auto;
+        max-height: 800px;  /* 最大高さを設定 */
+        overflow-y: auto;  /* 縦方向にスクロール可能 */
+    }
     """
     with gr.Blocks(css=custom_css) as demo:
         gr.Markdown("# 🎨 AI Gradio Code Generator")
@@ -691,13 +649,23 @@ def build_interface():
                 model_select = gr.Dropdown(
                     choices=INTEGRATED_MODELS,
                     value=[
-                        INTEGRATED_MODELS[0], 
                         INTEGRATED_MODELS[4],
+                        INTEGRATED_MODELS[5],
+                        INTEGRATED_MODELS[6],
                         INTEGRATED_MODELS[7],
+                        INTEGRATED_MODELS[8],
                     ],
                     multiselect=True,
                     label="使用するモデルを選択",
                     info="複数のモデルを選択できます"
+                )
+                
+                # 実装計画オプションをここに移動
+                use_planning = gr.Radio(
+                    choices=["はい", "いいえ"],
+                    label="o3-miniによる実装計画を利用しますか？",
+                    value="はい",
+                    info="o3-miniが実装計画を作成し、その計画に基づいて各モデルが実装を行います。"
                 )
 
             # 右側のカラム
@@ -733,6 +701,12 @@ def build_interface():
             size="lg"
         )
 
+        # 実装計画セクション（結果の前に配置）
+        plan_output = gr.Markdown(
+            visible=False,
+            elem_classes="implementation-plan"
+        )
+
         # 結果セクション
         gr.Markdown("## 結果")
         output_html = gr.HTML(
@@ -748,15 +722,48 @@ def build_interface():
             else:
                 return text_prompt  # 編集された、またはデフォルトのText用プロンプト
 
-        # ボタンクリック時の処理
-        async def run_generate(q, m, pt, wp, tp):
-            # get_system_promptでシステムプロンプトを取得し、prompt_type(pt)も渡す
-            return await generate_parallel(q, m, get_system_prompt(pt, wp, tp), pt)
+        # ボタンクリック時の処理を更新
+        async def run_generate(q, m, pt, wp, tp, up):
+            try:
+                # 非ブロッキングでのロック取得を試みる（タイムアウトを短く設定）
+                await asyncio.wait_for(generation_lock.acquire(), timeout=0.001)
+            except asyncio.TimeoutError:
+                logger.info("Generation is already in progress. Ignoring duplicate request.")
+                return [plan_output, "<div style='padding: 8px;color:red;'>Process already in progress. Please wait...</div>"]
+            try:
+                use_plan = (up == "はい")
+                if use_plan:
+                    implementation_plan = await get_implementation_plan(q, pt)
+                    logger.info("Implementation Plan:")
+                    logger.info(implementation_plan)
+                    plan_output.visible = True
+                    plan_output.value = f"## 実装計画 (o3-mini)\n\n{implementation_plan}"
+                else:
+                    plan_output.visible = False
+                    implementation_plan = ""
+
+                result = await generate_parallel(
+                    q, m,
+                    get_system_prompt(pt, wp, tp),
+                    pt,
+                    use_planning=use_plan
+                )
+
+                return [plan_output, result]
+            finally:
+                generation_lock.release()
 
         generate_btn.click(
             fn=run_generate,
-            inputs=[query_input, model_select, prompt_type, system_prompt_webapp_textbox, system_prompt_text_textbox],
-            outputs=output_html
+            inputs=[
+                query_input, 
+                model_select, 
+                prompt_type, 
+                system_prompt_webapp_textbox, 
+                system_prompt_text_textbox,
+                use_planning
+            ],
+            outputs=[plan_output, output_html]
         )
     return demo
 
