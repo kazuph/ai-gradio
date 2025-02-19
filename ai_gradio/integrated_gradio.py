@@ -776,11 +776,25 @@ def build_interface():
                     visible=False
                 )
 
-        # Generate ボタン
+        # Generate ボタン (⌘+Enter のショートカットを追加)
         generate_btn = gr.Button(
-            "Generate",
+            "Generate (⌘+Enter)",
             variant="primary",
             size="lg"
+        )
+
+        # ショートカットの設定
+        query_input.submit(
+            fn=run_generate,
+            inputs=[
+                query_input, 
+                model_select, 
+                prompt_type, 
+                system_prompt_webapp_textbox, 
+                system_prompt_text_textbox,
+                use_planning
+            ],
+            outputs=[plan_output, output_html]
         )
 
         # 実装計画セクション（結果の前に配置）
