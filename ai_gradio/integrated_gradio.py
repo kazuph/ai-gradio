@@ -776,12 +776,64 @@ def build_interface():
                     visible=False
                 )
 
+        # 実装計画セクション（結果の前に配置）
+        plan_output = gr.Markdown(
+            visible=False,
+            elem_classes="implementation-plan"
+        )
+
+        # 結果セクション
+        gr.Markdown("## 結果")
+        output_html = gr.HTML(
+            container=True,
+            show_label=True,
+            elem_classes="result-output"
+        )
+
         # Generate ボタン (⌘+Enter のショートカットを追加)
         generate_btn = gr.Button(
             "Generate (⌘+Enter)",
             variant="primary",
             size="lg"
         )
+
+        # プロンプトタイプに応じて system_prompt を決定する関数
+        def get_system_prompt(prompt_type, webapp_prompt, text_prompt):
+            if prompt_type == "Web App":
+                return webapp_prompt  # 編集された、またはデフォルトのWeb App用プロンプト
+            else:
+                return text_prompt  # 編集された、またはデフォルトのText用プロンプト
+
+        # ボタンクリック時の処理を更新
+        async def run_generate(q, m, pt, wp, tp, up):
+            try:
+                # 非ブロッキングでのロック取得を試みる（タイムアウトを短く設定）
+                await asyncio.wait_for(generation_lock.acquire(), timeout=0.001)
+            except asyncio.TimeoutError:
+                logger.info("Generation is already in progress. Ignoring duplicate request.")
+                return [plan_output, "<div style='padding: 8px;color:red;'>Process already in progress. Please wait...</div>"]
+            try:
+                use_plan = (up == "はい")
+                if use_plan:
+                    implementation_plan = await get_implementation_plan(q, pt)
+                    logger.info("Implementation Plan:")
+                    logger.info(implementation_plan)
+                    plan_output.visible = True
+                    plan_output.value = f"## 実装計画 (o3-mini)\n\n{implementation_plan}"
+                else:
+                    plan_output.visible = False
+                    implementation_plan = ""
+
+                result = await generate_parallel(
+                    q, m,
+                    get_system_prompt(pt, wp, tp),
+                    pt,
+                    use_planning=use_plan
+                )
+
+                return [plan_output, result]
+            finally:
+                generation_lock.release()
 
         # ショートカットの設定
         query_input.submit(
@@ -795,20 +847,6 @@ def build_interface():
                 use_planning
             ],
             outputs=[plan_output, output_html]
-        )
-
-        # 実装計画セクション（結果の前に配置）
-        plan_output = gr.Markdown(
-            visible=False,
-            elem_classes="implementation-plan"
-        )
-
-        # 結果セクション
-        gr.Markdown("## 結果")
-        output_html = gr.HTML(
-            container=True,
-            show_label=True,
-            elem_classes="result-output"
         )
 
         # プロンプトタイプに応じて system_prompt を決定する関数
