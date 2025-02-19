@@ -473,7 +473,7 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type, 
 
     # HTMLの生成（plan_htmlを削除）
     grid_html = """
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-coy.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-markup.min.js"></script>
     <div class='results-container'>
@@ -506,11 +506,14 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type, 
                                 <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
                             </svg>
                         </button>
-                        <button class="button-icon" onclick="(function(){{
+                        <button class="button-icon" onclick="(function(){{ 
                             var iframe = document.getElementById('{model_id}_preview');
                             if (iframe){{
-                                // iframe.contentWindow.location.reload() の代わりに、src を再代入します
-                                iframe.src = iframe.src;
+                                var currentSrc = iframe.src;
+                                iframe.src = 'about:blank';
+                                setTimeout(function() {{
+                                    iframe.src = currentSrc;
+                                }}, 100);
                             }}
                         }})()" title="プレビューを更新">
                             <svg viewBox="0 0 24 24">
@@ -541,6 +544,18 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type, 
 # 統合Gradioインターフェースの定義
 def build_interface():
     custom_css = """
+    :root {
+        --card-bg: #ffffff;
+        --header-bg: #f5f5f5;
+        --border-color: #e0e0e0;
+        --text-color: #333333;
+        --icon-color: #333333;
+        --button-hover-bg: rgba(0, 0, 0, 0.1);
+        --code-bg: #f5f5f5;
+        --code-text: #333333;
+        --preview-bg: #ffffff;
+        --preview-border: #e0e0e0;
+    }
     * {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     }
@@ -584,13 +599,6 @@ def build_interface():
         background: var(--neutral-50);
     }
 
-    @media (prefers-color-scheme: dark) {
-        .implementation-plan {
-            background: var(--neutral-900);
-            color: var(--neutral-100);
-        }
-    }
-
     /* 結果カードのスタイル更新 */
     .result-card {
         background: var(--card-bg);
@@ -599,6 +607,52 @@ def build_interface():
         overflow: hidden;
         margin-bottom: 32px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        color: var(--text-color);
+    }
+
+    /* カードヘッダーのスタイルの修正 */
+    .card-header {
+        background: var(--header-bg, #f5f5f5);
+        border-bottom: 1px solid var(--border-color, #e0e0e0);
+        color: var(--text-color, #333333);
+    }
+
+    /* ヘッダー内の強調テキストの修正 */
+    .header-title strong {
+        color: var(--text-color, #333333);
+        margin-right: 4px;
+    }
+
+    /* ヘッダーボタンのスタイル */
+    .header-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .button-icon {
+        background: none;
+        border: 1px solid var(--border-color, #404040);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        transition: all 0.2s;
+        color: var(--icon-color, #333333);
+    }
+
+    .button-icon:hover {
+        background-color: var(--button-hover-bg, rgba(0, 0, 0, 0.1));
+        border-color: var(--icon-color, #333333);
+    }
+
+    .button-icon svg {
+        width: 20px;
+        height: 20px;
+        color: var(--icon-color, #333333);
     }
 
     .preview-container {
@@ -621,18 +675,45 @@ def build_interface():
         background: var(--preview-bg);
     }
 
-    /* コードブロックの高さも調整 */
+    /* コードブロックのスタイル */
     .code-content {
-        background: var(--code-bg);
+        background: var(--code-bg, #1e1e1e);
+        color: var(--code-text, #d4d4d4);
         padding: 16px;
         margin: 16px;
         border-radius: 4px;
         overflow-x: auto;
-        max-height: 800px;  /* 最大高さを設定 */
-        overflow-y: auto;  /* 縦方向にスクロール可能 */
+        max-height: 800px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+    }
+
+    .code-content pre {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+    }
+
+    .code-content code {
+        font-family: 'Consolas', 'Monaco', 'Andale Mono', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        color: inherit;
     }
     """
-    with gr.Blocks(css=custom_css) as demo:
+    with gr.Blocks(
+        css=custom_css,
+        theme=gr.themes.Soft(
+            primary_hue="blue",
+            secondary_hue="slate",
+            neutral_hue="slate",
+            font=["system-ui", "-apple-system", "sans-serif"]
+        ).set(
+            background_fill_primary="#ffffff",
+            background_fill_secondary="#f5f5f5",
+            border_color_primary="#e0e0e0"
+        )
+    ) as demo:
         gr.Markdown("# 🎨 AI Gradio Code Generator")
 
         # 入力セクション
@@ -650,11 +731,11 @@ def build_interface():
                 model_select = gr.Dropdown(
                     choices=INTEGRATED_MODELS,
                     value=[
-                        INTEGRATED_MODELS[5],
-                        INTEGRATED_MODELS[6],
+                       # INTEGRATED_MODELS[4],
+                        # INTEGRATED_MODELS[5],
+                        # INTEGRATED_MODELS[6],
                         INTEGRATED_MODELS[7],
-                        INTEGRATED_MODELS[8],
-                        INTEGRATED_MODELS[9],
+                        # INTEGRATED_MODELS[8],
                     ],
                     multiselect=True,
                     label="使用するモデルを選択",
@@ -665,7 +746,7 @@ def build_interface():
                 use_planning = gr.Radio(
                     choices=["はい", "いいえ"],
                     label="o3-miniによる実装計画を利用しますか？",
-                    value="はい",
+                    value="いいえ",
                     info="o3-miniが実装計画を作成し、その計画に基づいて各モデルが実装を行います。"
                 )
 
