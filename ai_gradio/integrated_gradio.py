@@ -712,9 +712,7 @@ def build_interface():
             background_fill_primary="#ffffff",
             background_fill_secondary="#f5f5f5",
             border_color_primary="#e0e0e0"
-        ),
-        reload=True,  # Enable hot reloading
-        reload_interval=1  # Check for changes every 1 second
+        )
     ) as demo:
         gr.Markdown("# 🎨 AI Gradio Code Generator")
 
@@ -856,6 +854,5 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        show_error=True,
-        reload=True  # Enable hot reloading at launch time as well
+        show_error=True
     ) 
