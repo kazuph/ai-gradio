@@ -30,15 +30,16 @@ BASE_URL = os.environ.get("BASE_URL", "http://localhost:7860")
 INTEGRATED_MODELS = [
     "openai:o3-mini",
     "openai:o3-mini-high",
-    "openai:gpt-4o-mini", 
-    "openai:gpt-4o", 
-    "anthropic:claude-3-5-sonnet-20241022", 
+    "openai:gpt-4o-mini",
+    "openai:gpt-4o",
+    "openai:chatgpt-4o-latest",
+    "anthropic:claude-3-5-sonnet-20241022",
     "gemini:gemini-2.0-pro-exp-02-05",
     "gemini:gemini-2.0-flash",
     "gemini:gemini-2.0-flash-lite-preview-02-05",
     "gemini:gemini-2.0-flash-thinking-exp-01-21",
     # "gemini:gemini-exp-1206",
-    # "gemini:gemini-1.5-pro", 
+    # "gemini:gemini-1.5-pro",
     # "deepseek:deepseek-r1",
 ]
 
@@ -100,23 +101,23 @@ def generate_openai(query, model, system_prompt, prompt_type):
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set.")
-        
+
         client = OpenAI(api_key=api_key)
-        
+
         # system_prompt を使用 (引数として受け取る)
-        
+
         # モデル名とパラメータの処理
         if model in ("openai:o3-mini-high", "o3-mini-high"):
             actual_model = "o3-mini"
         else:
             actual_model = model.replace("openai:", "")
-        
+
         # prompt_type に応じて user メッセージを設定する
         if prompt_type == "Web App":
             user_msg = f"Create a web application that: {query}"
         else:
             user_msg = query
-        
+
         # 基本パラメータ（すべてのモデルで共通）
         params = {
             "model": actual_model,
@@ -126,7 +127,7 @@ def generate_openai(query, model, system_prompt, prompt_type):
             ],
             "stream": False
         }
-        
+
         # o3-mini-highの場合はreasoning_effortを設定
         if model in ("openai:o3-mini-high", "o3-mini-high"):
             params["reasoning_effort"] = "high"
@@ -136,9 +137,9 @@ def generate_openai(query, model, system_prompt, prompt_type):
                 "max_tokens": 2048,
                 "temperature": 0.7
             })
-        
+
         response = client.chat.completions.create(**params)
-        
+
         response_text = response.choices[0].message.content
         code = remove_code_block(response_text)
         preview = send_to_preview(code)
@@ -154,12 +155,12 @@ def generate_anthropic(query, model, system_prompt, prompt_type):
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable is not set.")
-        
+
         from anthropic import Anthropic
         client = Anthropic(api_key=api_key)
-        
+
         # システムプロンプトを改善 (引数を使用)
-        
+
         if prompt_type == "Web App":
             content = f"{system_prompt}\n\nCreate a web application that: {query}"
         else:
@@ -172,7 +173,7 @@ def generate_anthropic(query, model, system_prompt, prompt_type):
                 "content": content
             }]
         )
-        
+
         response_text = response.content[0].text
         code = remove_code_block(response_text)
         preview = send_to_preview(code)
@@ -184,18 +185,18 @@ def generate_anthropic(query, model, system_prompt, prompt_type):
 def generate_gemini(query, model, system_prompt, prompt_type):
     try:
         load_dotenv()
-        
+
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set.")
-        
+
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        
+
         model = genai.GenerativeModel(model_name=model)
-        
+
         # システムプロンプト (引数を使用)
-        
+
         if prompt_type == "Web App":
             last_message = f"Create a web application that: {query}"
         else:
@@ -208,7 +209,7 @@ def generate_gemini(query, model, system_prompt, prompt_type):
             ],
             stream=False
         )
-        
+
         response_text = response.text
         code = remove_code_block(response_text)
         preview = send_to_preview(code)
@@ -223,12 +224,12 @@ def generate_deepseek(query, model, system_prompt, prompt_type):
         api_key = os.environ.get("DEEPSEEK_API_KEY")
         if not api_key:
             raise ValueError("DEEPSEEK_API_KEY environment variable is not set.")
-        
+
         client = OpenAI(
             api_key=api_key,
             base_url="https://api.deepseek.com/v1"
         )
-        
+
         # DeepSeek API 呼び出し (system_promptを使用)
         if prompt_type == "Web App":
             user_msg = f"Create a web application that: {query}"
@@ -244,7 +245,7 @@ def generate_deepseek(query, model, system_prompt, prompt_type):
             max_tokens=2048,
             stream=False
         )
-        
+
         response_text = response.choices[0].message.content
         code = remove_code_block(response_text)
         preview = send_to_preview(code)
@@ -269,7 +270,7 @@ def send_to_preview(code, iframe_id=""):
     生成されたコードに <base> タグを追加し、iframe 内での相対 URL の解決を保証します。
     """
     clean_code = code.replace("```html", "").replace("```", "").strip()
-    
+
     # 既にHTML文書でなければ、<base>タグ付きのHTMLテンプレートでラップ
     if "<html" not in clean_code.lower():
         wrapped_code = f"""<!DOCTYPE html>
@@ -298,7 +299,7 @@ def send_to_preview(code, iframe_id=""):
 
     encoded_html = base64.b64encode(wrapped_code.encode('utf-8')).decode('utf-8')
     data_uri = f"data:text/html;charset=utf-8;base64,{encoded_html}"
-    
+
     id_attribute = f' id="{iframe_id}"' if iframe_id else ""
     return f'''
         <iframe{id_attribute}
@@ -313,9 +314,9 @@ def send_to_preview(code, iframe_id=""):
 def send_to_preview_react(react_code, container_id=""):
     """
     LLM が生成した React コンポーネントのコードを使ってプレビューを生成する関数です。
-    
+
     ※ この実装は試作用であり、セキュリティ対策は最小限です。
-    
+
     生成されたコードは、Reactコンポーネント（例: GeneratedComponent）が定義されている前提です。
     Babel を利用して JSX をランタイムにコンパイルし、ReactDOM でレンダリングします。
     """
@@ -384,9 +385,9 @@ async def get_implementation_plan(query, prompt_type):
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set.")
-        
+
         client = OpenAI(api_key=api_key)
-        
+
         planning_prompt = """あなたは優秀なソフトウェアアーキテクトです。
 以下の要件に対する実装計画を作成してください。
 
@@ -405,7 +406,7 @@ async def get_implementation_plan(query, prompt_type):
             user_msg = f"以下のWebアプリケーションの実装計画を作成してください：{query}"
         else:
             user_msg = f"以下の機能の実装計画を作成してください：{query}"
-        
+
         response = client.chat.completions.create(
             model="o3-mini",
             messages=[
@@ -414,7 +415,7 @@ async def get_implementation_plan(query, prompt_type):
             ],
             stream=False
         )
-        
+
         plan = response.choices[0].message.content
         return plan
     except Exception as e:
@@ -424,26 +425,26 @@ async def get_implementation_plan(query, prompt_type):
 async def generate_parallel(query, selected_models, system_prompt, prompt_type, use_planning=False):
     logger.info(f"Received generation request - Query: {query}")
     logger.info(f"Selected models: {selected_models}")
-    
+
     implementation_plan = ""
     if use_planning:
         implementation_plan = await get_implementation_plan(query, prompt_type)
         # 実装計画をシステムプロンプトに追加
         system_prompt = f"{system_prompt}\n\n実装計画：\n{implementation_plan}"
-    
+
     # 同時実行数を制御するセマフォを作成（必要に応じて数値を調整）
     semaphore = asyncio.Semaphore(5)  # 同時に5つまで実行可能
-    
+
     async def run_with_semaphore(full_model, task):
         async with semaphore:
             return await task
-    
+
     tasks = []
     for full_model in selected_models:
         try:
             provider, model = full_model.split(":")
             logger.info(f"Preparing task for {full_model}")
-            
+
             if provider == "openai":
                 task = async_generate_openai(query, model, system_prompt, prompt_type)
             elif provider == "anthropic":
@@ -455,13 +456,13 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type, 
             else:
                 logger.error(f"Unknown provider: {full_model}")
                 continue
-            
+
             tasks.append((full_model, run_with_semaphore(full_model, task)))
-            
+
         except Exception as e:
             logger.error(f"Error preparing task for {full_model}: {str(e)}")
             continue
-    
+
     results = []
     if tasks:
         completed_tasks = await asyncio.gather(*(task for _, task in tasks))
@@ -483,10 +484,10 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type, 
     for full_model, code, preview in results:
         provider, model_name = full_model.split(":")
         model_id = f"model_{provider}_{model_name}".replace("-", "_")
-        
+
         preview_iframe = send_to_preview(code, iframe_id=f"{model_id}_preview")
         escaped_code = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        
+
         grid_html += f"""
             <div class='result-card'>
                 <div class='card-header'>
@@ -494,23 +495,23 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type, 
                         <strong>{provider.upper()}</strong> - {model_name}
                     </div>
                     <div class='header-buttons'>
-                        <button class="button-icon" onclick="(function(){{ 
-                            var codeEl = document.getElementById('{model_id}_code'); 
-                            if (codeEl){{ 
-                                codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none'); 
-                                if (codeEl.style.display === 'block' && window.Prism){{ Prism.highlightAll(); }} 
-                            }} 
+                        <button class="button-icon" onclick="(function(){{
+                            var codeEl = document.getElementById('{model_id}_code');
+                            if (codeEl){{
+                                codeEl.style.display = (codeEl.style.display === 'none' ? 'block' : 'none');
+                                if (codeEl.style.display === 'block' && window.Prism){{ Prism.highlightAll(); }}
+                            }}
                         }})()" title="コードを表示/非表示">
                             <svg viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
                             </svg>
                         </button>
-                        <button class="button-icon" onclick="(function(){{ 
-                            var iframe = document.getElementById('{model_id}_preview'); 
-                            if (iframe){{ 
+                        <button class="button-icon" onclick="(function(){{
+                            var iframe = document.getElementById('{model_id}_preview');
+                            if (iframe){{
                                 // iframe.contentWindow.location.reload() の代わりに、src を再代入します
-                                iframe.src = iframe.src; 
-                            }} 
+                                iframe.src = iframe.src;
+                            }}
                         }})()" title="プレビューを更新">
                             <svg viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
@@ -533,7 +534,7 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type, 
         </div>
     </div>
     """
-    
+
     logger.info("Completed generating HTML grid")
     return grid_html
 
@@ -633,7 +634,7 @@ def build_interface():
     """
     with gr.Blocks(css=custom_css) as demo:
         gr.Markdown("# 🎨 AI Gradio Code Generator")
-        
+
         # 入力セクション
         gr.Markdown("## 入力")
         with gr.Row():
@@ -649,17 +650,17 @@ def build_interface():
                 model_select = gr.Dropdown(
                     choices=INTEGRATED_MODELS,
                     value=[
-                        INTEGRATED_MODELS[4],
                         INTEGRATED_MODELS[5],
                         INTEGRATED_MODELS[6],
                         INTEGRATED_MODELS[7],
                         INTEGRATED_MODELS[8],
+                        INTEGRATED_MODELS[9],
                     ],
                     multiselect=True,
                     label="使用するモデルを選択",
                     info="複数のモデルを選択できます"
                 )
-                
+
                 # 実装計画オプションをここに移動
                 use_planning = gr.Radio(
                     choices=["はい", "いいえ"],
@@ -756,10 +757,10 @@ def build_interface():
         generate_btn.click(
             fn=run_generate,
             inputs=[
-                query_input, 
-                model_select, 
-                prompt_type, 
-                system_prompt_webapp_textbox, 
+                query_input,
+                model_select,
+                prompt_type,
+                system_prompt_webapp_textbox,
                 system_prompt_text_textbox,
                 use_planning
             ],
@@ -773,4 +774,4 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         server_port=7860,
         show_error=True
-    ) 
+    )
