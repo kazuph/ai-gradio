@@ -7,7 +7,7 @@ import {
   type LinksFunction,
 } from 'react-router'
 
-import styles from './tailwind.css?url'
+import styles from './styles/theme.css?url'
 
 export const links: LinksFunction = () => [
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
