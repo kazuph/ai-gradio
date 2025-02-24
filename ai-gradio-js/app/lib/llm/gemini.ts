@@ -10,17 +10,28 @@ export async function generateGemini(
   const modelName = model.replace("gemini:", "");
   try {
     const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-    const geminiModel = genAI.getGenerativeModel({ model: modelName });
+    // Initialize the model with additional configuration for experimental models
+    const geminiModel = genAI.getGenerativeModel({ 
+      model: modelName,
+      generationConfig: {
+        temperature: 1,
+        topP: 0.95,
+        topK: 64,
+        maxOutputTokens: 8192,
+        responseMimeType: "text/plain",
+      },
+      apiVersion: "v1beta"  // Important for experimental models
+    });
 
     const chat = geminiModel.startChat({
       history: [
         {
           role: "user",
-          parts: systemPrompt,
+          parts: [{ text: systemPrompt }]
         },
         {
           role: "model",
-          parts: "I understand and will follow these instructions.",
+          parts: [{ text: "I understand and will follow these instructions." }]
         },
       ],
     });
@@ -30,7 +41,7 @@ export async function generateGemini(
       query,
     });
 
-    const result = await chat.sendMessage(query);
+    const result = await chat.sendMessage([{ text: query }]);
     const response = await result.response;
     
     console.log(`Gemini API Response - Model: ${modelName}`, {

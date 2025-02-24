@@ -1,28 +1,40 @@
 import { useState, useEffect, useRef } from 'react';
-import type { GenerationResponse } from "../types";
+import type { GenerationResponse, LLMResponse } from "../types";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 interface ResultDisplayProps {
-  response: GenerationResponse | null;
+  responses: LLMResponse[];
+  plan?: string;
 }
 
-export function ResultDisplay({ response }: ResultDisplayProps) {
-  const [showCode, setShowCode] = useState<{[key: number]: boolean}>({});
-  const [iframeHeights, setIframeHeights] = useState<{[key: number]: number}>({});
-  const iframeRefs = useRef<{[key: number]: HTMLIFrameElement}>({});
+export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
+  const [showCode, setShowCode] = useState<{[key: string]: boolean}>({});
+  const [showPreview, setShowPreview] = useState<{[key: string]: boolean}>({});
+  const [iframeHeights, setIframeHeights] = useState<{[key: string]: number}>({});
+  const iframeRefs = useRef<{[key: string]: HTMLIFrameElement}>({});
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const { height, index } = event.data;
-      if (height && typeof index === 'number') {
-        setIframeHeights(prev => ({ ...prev, [index]: height }));
+      const { height, key } = event.data;
+      if (height && typeof key === 'string') {
+        setIframeHeights(prev => ({ ...prev, [key]: height }));
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  // 初期状態ではすべてのプレビューを表示
+  useEffect(() => {
+    const initialShowPreview: {[key: string]: boolean} = {};
+    responses.forEach((result) => {
+      const uniqueKey = `${result.model}-${result.startTime}`;
+      initialShowPreview[uniqueKey] = true;
+    });
+    setShowPreview(initialShowPreview);
+  }, [responses]);
 
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString();
@@ -34,30 +46,30 @@ export function ResultDisplay({ response }: ResultDisplayProps) {
     return str.replace(/^```[\w]*\n/, '').replace(/\n```$/, '');
   };
 
-  console.log('🚀 Response:', response);
-  if (!response) return null;
-
-  console.log('🚀 Response:', response.results[0].output);
+  // 最新の結果が上に表示されるように並び替え
+  const sortedResponses = [...responses].sort((a, b) => {
+    return (b.startTime || 0) - (a.startTime || 0);
+  });
 
   return (
     <div className="space-y-6">
-      {response.plan && (
+      {plan && (
         <div className="card p-4">
           <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
             Implementation Plan
           </h3>
           <pre className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">
-            {response.plan}
+            {plan}
           </pre>
         </div>
       )}
 
       <div className="space-y-4">
-        {response.results.map((result, index) => {
+        {sortedResponses.map((result) => {
           // outputからバッククオートを削除
           const cleanOutput = removeBackticks(result.output);
           // 一意のキーを作成
-          const uniqueKey = `${result.model}-${index}`;
+          const uniqueKey = `${result.model}-${result.startTime}`;
           
           return (
             <div
@@ -82,39 +94,46 @@ export function ResultDisplay({ response }: ResultDisplayProps) {
                   <div className="space-y-4">
                     {/* Preview of the generated HTML */}
                     <div className="border rounded overflow-hidden">
-                      <div className="bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)]">
-                        Preview
-                      </div>
-                      <iframe
-                        title={`Preview ${result.model}`}
-                        ref={(el) => {
-                          if (el) iframeRefs.current[index] = el;
-                        }}
-                        srcDoc={`
-                          ${cleanOutput}
-                          <script>
-                            window.addEventListener('load', function() {
-                              const height = document.documentElement.scrollHeight;
-                              window.parent.postMessage({ height, index: ${index} }, '*');
-                            });
-                          </script>
-                        `}
-                        className="w-full bg-white transition-height duration-200 ease-in-out"
-                        style={{ height: `${iframeHeights[index] || 500}px` }}
-                        sandbox="allow-scripts allow-forms"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPreview(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
+                        className="w-full bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)] flex justify-between items-center hover:bg-opacity-80 transition-colors"
+                      >
+                        <span>Preview</span>
+                        <span>{showPreview[uniqueKey] ? '▼' : '▶'}</span>
+                      </button>
+                      {showPreview[uniqueKey] && (
+                        <iframe
+                          title={`Preview ${result.model}`}
+                          ref={(el) => {
+                            if (el) iframeRefs.current[uniqueKey] = el;
+                          }}
+                          srcDoc={`
+                            ${cleanOutput}
+                            <script>
+                              window.addEventListener('load', function() {
+                                const height = document.documentElement.scrollHeight;
+                                window.parent.postMessage({ height, key: "${uniqueKey}" }, '*');
+                              });
+                            </script>
+                          `}
+                          className="w-full bg-white transition-height duration-200 ease-in-out"
+                          style={{ height: `${iframeHeights[uniqueKey] || 500}px` }}
+                          sandbox="allow-scripts allow-forms"
+                        />
+                      )}
                     </div>
                     {/* Raw HTML code */}
                     <div className="border rounded">
                       <button
                         type="button"
-                        onClick={() => setShowCode(prev => ({ ...prev, [index]: !prev[index] }))}
+                        onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
                         className="w-full bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)] flex justify-between items-center hover:bg-opacity-80 transition-colors"
                       >
                         <span>HTML Code</span>
-                        <span>{showCode[index] ? '▼' : '▶'}</span>
+                        <span>{showCode[uniqueKey] ? '▼' : '▶'}</span>
                       </button>
-                      {showCode[index] && (
+                      {showCode[uniqueKey] && (
                         <div className="overflow-hidden">
                           <SyntaxHighlighter
                             language="html"

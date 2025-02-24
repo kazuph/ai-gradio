@@ -1,7 +1,7 @@
 import { generateOpenAI } from "./openai";
 import { generateAnthropic } from "./anthropic";
 import { generateGemini } from "./gemini";
-import { GenerationRequest, GenerationResponse, ModelType } from "../../types";
+import type { GenerationRequest, GenerationResponse, LLMResponse, ModelType } from "../../types";
 import { DEFAULT_TEXT_SYSTEM_PROMPT } from "../../constants/models";
 
 async function getImplementationPlan(query: string, env: Env): Promise<string> {
@@ -59,37 +59,42 @@ export async function generate({
     plan = await getImplementationPlan(query, env);
   }
 
-  const results = await Promise.all(
-    selectedModels.map(async (model) => {
-      const startTime = Date.now();
-      try {
-        console.log(`Generating with ${model}...`);
-        const response = await generateForModel(model, query, systemPrompt, env);
-        const result = {
-          model,
-          output: response.output,
-          error: response.error,
-          startTime,
-          endTime: Date.now(),
-        };
-        console.log(`Response from ${model}:`, result);
-        return result;
-      } catch (error) {
-        const errorResult = {
-          model,
-          output: "",
-          error: error instanceof Error ? error.message : 'Unknown error',
-          startTime,
-          endTime: Date.now(),
-        };
-        console.error(`Error from ${model}:`, errorResult);
-        return errorResult;
-      }
-    }),
-  );
+  // 各モデルの生成を開始し、結果を格納する配列
+  const results: LLMResponse[] = [];
+  
+  // 各モデルの生成を開始
+  const modelPromises = selectedModels.map(async (model) => {
+    const startTime = Date.now();
+    try {
+      console.log(`Generating with ${model}...`);
+      const response = await generateForModel(model, query, systemPrompt, env);
+      const result = {
+        model,
+        output: response.output,
+        error: response.error,
+        startTime,
+        endTime: Date.now(),
+      };
+      console.log(`Response from ${model}:`, result);
+      return result;
+    } catch (error) {
+      const errorResult = {
+        model,
+        output: "",
+        error: error instanceof Error ? error.message : 'Unknown error',
+        startTime,
+        endTime: Date.now(),
+      };
+      console.error(`Error from ${model}:`, errorResult);
+      return errorResult;
+    }
+  });
 
+  // すべてのモデルの結果を待つ
+  const allResults = await Promise.all(modelPromises);
+  
   return {
-    results,
+    results: allResults,
     plan: plan || undefined,
   };
 }

@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.18.0",
-    "@google/generative-ai": "^0.2.1",
+    "@google/generative-ai": "^0.22.0",
     "@react-router/cloudflare": "7.0.0-pre.1",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/typography": "^0.5.10",

@@ -27,7 +27,9 @@ export const DEFAULT_WEBAPP_SYSTEM_PROMPT = `You are an expert web developer. Wh
 4. Ensure the code is complete and self-contained.
 5. Add helpful comments explaining key parts of the code.
 6. Focus on creating a functional and visually appealing result.
-7. Additionally, an internal LLM API is available at POST /api/llm.
+7. Note: This is an application running inside an iframe.
+8. IMPORTANT: DO NOT use localStorage or sessionStorage as they won't work properly in the iframe environment.
+9. Additionally, an internal LLM API is available at POST /api/llm.
    - To use this API, send a JSON object with:
      * 'prompt' field containing your textual prompt
      * 'format_type' field set to either "text" or "json"
