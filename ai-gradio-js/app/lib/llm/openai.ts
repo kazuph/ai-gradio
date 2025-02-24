@@ -12,16 +12,22 @@ export async function generateOpenAI(
       apiKey: env.OPENAI_API_KEY,
     });
 
-    const response = await client.chat.completions.create({
-      model: model.replace("openai:", ""),
+    const modelName = model.replace("openai:", "");
+    const baseParams = {
+      model: modelName,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: query },
       ],
-      temperature: 0.7,
-    });
+    };
 
-    const modelName = model.replace("openai:", "");
+    // O3モデルの場合はtemperatureを含めない
+    const params = modelName.includes("o3") 
+      ? baseParams
+      : { ...baseParams, temperature: 0.7 };
+
+    const response = await client.chat.completions.create(params);
+
     return {
       model: modelName,
       output: response.choices[0]?.message?.content || "",
