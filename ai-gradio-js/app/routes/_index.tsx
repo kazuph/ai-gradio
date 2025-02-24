@@ -75,9 +75,10 @@ export default function Index() {
   }, [fetcher.state]);
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="card p-6 space-y-6">
+    <div className="min-h-screen flex">
+      {/* Left Sidebar */}
+      <div className="w-80 min-w-80 border-r border-[var(--color-border)] p-4 overflow-y-auto">
+        <div className="space-y-6">
           <div className="space-y-8">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">AI Gradio JS</h1>
@@ -87,10 +88,14 @@ export default function Index() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[var(--color-text-primary)]">
+              <label 
+                htmlFor="systemPrompt" 
+                className="block text-sm font-medium text-[var(--color-text-primary)]"
+              >
                 System Prompt
               </label>
               <textarea
+                id="systemPrompt"
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 className="input-field w-full min-h-[100px]"
@@ -149,10 +154,18 @@ export default function Index() {
                 />
               </fetcher.Form>
             </div>
-
-            <ResultDisplay response={response} />
           </div>
         </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 p-4 overflow-y-auto">
+        {(isLoading || response) && (
+          <div className="max-w-[1200px] mx-auto">
+            {isLoading && <div className="text-center">Generating...</div>}
+            <ResultDisplay response={response} />
+          </div>
+        )}
       </div>
     </div>
   );

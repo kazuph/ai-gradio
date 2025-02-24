@@ -8,6 +8,7 @@ export const MODEL_CATEGORIES = {
   ],
   Anthropic: [
     "anthropic:claude-3-5-sonnet-20241022",
+    "anthropic:claude-3-7-sonnet-20250219",
   ],
   Gemini: [
     "gemini:gemini-2.0-pro-exp-02-05",

@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { LLMResponse } from "../../types";
+import type { LLMResponse } from "../../types";
 
 export async function generateGemini(
   query: string,
@@ -9,7 +9,7 @@ export async function generateGemini(
 ): Promise<LLMResponse> {
   const modelName = model.replace("gemini:", "");
   try {
-    const genAI = new GoogleGenerativeAI(env.GOOGLE_API_KEY);
+    const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
     const geminiModel = genAI.getGenerativeModel({ model: modelName });
 
     const chat = geminiModel.startChat({

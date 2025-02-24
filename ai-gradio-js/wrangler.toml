@@ -10,8 +10,3 @@ directory = "./build/client"
 
 [build]
 command = "pnpm run build"
-
-[vars]
-OPENAI_API_KEY = "" # Set this in your environment
-ANTHROPIC_API_KEY = "" # Set this in your environment
-GOOGLE_API_KEY = "" # Set this in your environment
