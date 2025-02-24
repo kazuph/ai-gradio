@@ -15,35 +15,63 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-// ストリーミングレスポンスを処理するための関数
-async function streamResponse(response: Response, callback: (data: GenerationResponse) => void) {
-  const reader = response.body?.getReader();
-  if (!reader) return;
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
+// SSEイベントを処理するための関数
+function handleSSEEvents(eventSource: EventSource, callbacks: {
+  onPlan?: (plan: string) => void;
+  onResult?: (result: LLMResponse) => void;
+  onComplete?: () => void;
+  onError?: (error: string) => void;
+  onConnected?: (receivedClientId: string) => void;
+}) {
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
       
-      // 完全なJSONオブジェクトを探す
-      try {
-        const data = JSON.parse(buffer) as GenerationResponse;
-        callback(data);
-        buffer = '';
-      } catch (e) {
-        // JSONのパースに失敗した場合は、次のチャンクを待つ
+      switch (data.type) {
+        case 'connected':
+          console.log('SSE connection established');
+          callbacks.onConnected?.(data.clientId);
+          break;
+        case 'plan':
+          callbacks.onPlan?.(data.plan);
+          break;
+        case 'result':
+          callbacks.onResult?.(data.result);
+          break;
+        case 'complete':
+          callbacks.onComplete?.();
+          break;
+        case 'error':
+          callbacks.onError?.(data.error);
+          break;
+        default:
+          console.warn('Unknown event type:', data.type);
       }
+    } catch (error) {
+      console.error('Error parsing SSE event:', error);
     }
-  } catch (error) {
-    console.error('Error reading stream:', error);
-  } finally {
-    reader.releaseLock();
-  }
+  };
+
+  eventSource.onerror = (error) => {
+    console.error('SSE connection error:', error);
+    
+    // 接続が確立される前にエラーが発生した場合は、再試行せずにエラーを通知
+    if (eventSource.readyState === EventSource.CONNECTING) {
+      callbacks.onError?.('接続の確立に失敗しました。サーバーが応答していません。');
+      eventSource.close();
+    } 
+    // 接続が確立された後にエラーが発生した場合は、自動的に再接続を試みる
+    else if (eventSource.readyState === EventSource.OPEN) {
+      console.log('接続が一時的に切断されました。再接続を試みています...');
+    }
+    // 接続が閉じられた場合
+    else if (eventSource.readyState === EventSource.CLOSED) {
+      callbacks.onError?.('Connection error');
+      eventSource.close();
+    }
+  };
+
+  return eventSource;
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -88,12 +116,23 @@ export default function Index() {
   const [currentPlan, setCurrentPlan] = useState<string | undefined>(undefined);
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_TEXT_SYSTEM_PROMPT);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [eventSource, setEventSource] = useState<EventSource | null>(null);
+  const [clientId, setClientId] = useState<string | null>(null);
 
   useEffect(() => {
     setSystemPrompt(
       promptType === 'text' ? DEFAULT_TEXT_SYSTEM_PROMPT : DEFAULT_WEBAPP_SYSTEM_PROMPT
     );
   }, [promptType]);
+
+  // コンポーネントがアンマウントされたときにSSE接続を閉じる
+  useEffect(() => {
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [eventSource]);
 
   const fetcher = useFetcher<typeof action>();
   
@@ -116,6 +155,17 @@ export default function Index() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
+    // 既存のSSE接続を閉じる
+    if (eventSource) {
+      eventSource.close();
+    }
+    
+    // 状態をリセット
+    setIsLoading(true);
+    setAllResponses([]);
+    setCurrentPlan(undefined);
+    setClientId(null);
+    
     // フォームデータの準備
     const formData = new FormData();
     formData.append('selectedModels', JSON.stringify(selectedModels));
@@ -124,40 +174,84 @@ export default function Index() {
     formData.append('usePlanning', String(usePlanning));
     formData.append('query', query);
     
-    setIsLoading(true);
-    
     try {
-      // 通常のフェッチを使用してリクエストを送信
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        body: formData,
+      // SSE接続を開始
+      const es = new EventSource(`/api/generate?${new URLSearchParams({
+        timestamp: Date.now().toString() // キャッシュ防止
+      })}`);
+      
+      // SSEイベントハンドラを設定
+      handleSSEEvents(es, {
+        onPlan: (plan) => {
+          setCurrentPlan(plan);
+        },
+        onResult: (result) => {
+          setAllResponses(prev => [...prev, result]);
+        },
+        onComplete: () => {
+          setIsLoading(false);
+          es.close();
+        },
+        onError: (error) => {
+          console.error('SSE error:', error);
+          setIsLoading(false);
+          es.close();
+          // エラーメッセージを表示
+          setAllResponses(prev => [...prev, {
+            model: 'error',
+            output: '',
+            error: error,
+            startTime: Date.now(),
+            endTime: Date.now()
+          }]);
+        },
+        onConnected: (receivedClientId) => {
+          console.log('SSE connection established with client ID:', receivedClientId);
+          setClientId(receivedClientId);
+          
+          // クライアントIDを取得したら、POSTリクエストを送信
+          const updatedFormData = new FormData();
+          updatedFormData.append('selectedModels', JSON.stringify(selectedModels));
+          updatedFormData.append('systemPrompt', systemPrompt);
+          updatedFormData.append('promptType', promptType);
+          updatedFormData.append('usePlanning', String(usePlanning));
+          updatedFormData.append('query', query);
+          updatedFormData.append('clientId', receivedClientId);
+          
+          // SSE接続が確立された後にPOSTリクエストを送信
+          fetch('/api/generate', {
+            method: 'POST',
+            body: updatedFormData,
+          }).catch(error => {
+            console.error('Fetch error:', error);
+            if (es) es.close();
+            setIsLoading(false);
+            // エラーメッセージを表示
+            setAllResponses(prev => [...prev, {
+              model: 'error',
+              output: '',
+              error: error instanceof Error ? error.message : 'Failed to generate response',
+              startTime: Date.now(),
+              endTime: Date.now()
+            }]);
+          });
+        }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      setEventSource(es);
       
-      const data = await response.json() as GenerationResponse;
-      
-      // プランがあれば更新
-      if (data.plan) {
-        setCurrentPlan(data.plan);
-      }
-      
-      // 結果を追加
-      setAllResponses(prev => [...prev, ...data.results]);
+      // POSTリクエストをSSE接続確立後に送信するため、ここでは送信しない
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error('Error setting up SSE:', error);
+      setIsLoading(false);
       // エラーメッセージを表示
       setAllResponses(prev => [...prev, {
         model: 'error',
         output: '',
-        error: error instanceof Error ? error.message : 'Failed to generate response',
+        error: error instanceof Error ? error.message : 'Failed to set up SSE connection',
         startTime: Date.now(),
         endTime: Date.now()
       }]);
-    } finally {
-      setIsLoading(false);
     }
   };
 

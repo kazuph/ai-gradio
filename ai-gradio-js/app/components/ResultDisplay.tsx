@@ -13,6 +13,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
   const [showPreview, setShowPreview] = useState<{[key: string]: boolean}>({});
   const [iframeHeights, setIframeHeights] = useState<{[key: string]: number}>({});
   const iframeRefs = useRef<{[key: string]: HTMLIFrameElement}>({});
+  const [renderedResponses, setRenderedResponses] = useState<{[key: string]: boolean}>({});
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -26,15 +27,29 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // 初期状態ではすべてのプレビューを表示
+  // 新しいレスポンスが追加されたときに処理
   useEffect(() => {
-    const initialShowPreview: {[key: string]: boolean} = {};
-    responses.forEach((result) => {
-      const uniqueKey = `${result.model}-${result.startTime}`;
-      initialShowPreview[uniqueKey] = true;
+    // 新しいレスポンスを検出
+    const newResponses = responses.filter(response => {
+      const uniqueKey = `${response.model}-${response.startTime}`;
+      return !renderedResponses[uniqueKey];
     });
-    setShowPreview(initialShowPreview);
-  }, [responses]);
+
+    if (newResponses.length > 0) {
+      // 新しいレスポンスのプレビューを表示
+      const newShowPreview = { ...showPreview };
+      const newRenderedResponses = { ...renderedResponses };
+
+      for (const response of newResponses) {
+        const uniqueKey = `${response.model}-${response.startTime}`;
+        newShowPreview[uniqueKey] = true; // デフォルトでプレビューを表示
+        newRenderedResponses[uniqueKey] = true; // レンダリング済みとしてマーク
+      }
+
+      setShowPreview(newShowPreview);
+      setRenderedResponses(newRenderedResponses);
+    }
+  }, [responses, renderedResponses, showPreview]);
 
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString();
