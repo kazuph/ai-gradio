@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { LLMResponse } from "../../types";
+import type { LLMResponse } from "../../types";
 
 export async function generateAnthropic(
   query: string,
