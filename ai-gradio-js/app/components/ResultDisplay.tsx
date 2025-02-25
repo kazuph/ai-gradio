@@ -114,16 +114,23 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
 
   // マークダウンからHTMLコードブロックを抽出する関数
   const extractHtmlFromMarkdown = (text: string): { htmlCode: string, isMarkdown: boolean } => {
-    // HTMLコードブロックを検索
-    const htmlCodeBlockRegex = /```(?:html)?\s*\n([\s\S]*?)\n```/g;
+    // HTMLコードブロックを検索（複数の言語指定に対応する正規表現）
+    const htmlCodeBlockRegex = /```(?:html|HTML|javascript|js|jsx|ts|tsx)?\s*([\s\S]*?)```/g;
     const matches = [...text.matchAll(htmlCodeBlockRegex)];
     
     if (matches.length > 0) {
-      // 最初のHTMLコードブロックを使用
-      return { 
-        htmlCode: matches[0][1].trim(),
-        isMarkdown: true
-      };
+      // 最初のコードブロックを使用
+      const code = matches[0][1].trim();
+      
+      // コードがHTMLらしいかどうかをチェック
+      const containsHtml = /<\/?[a-z][\s\S]*>/i.test(code);
+      
+      if (containsHtml) {
+        return { 
+          htmlCode: code,
+          isMarkdown: true
+        };
+      }
     }
     
     // マークダウン形式かどうかを判断（簡易的な判定）
