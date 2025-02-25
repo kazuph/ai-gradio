@@ -75,7 +75,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
       prompt,
       defaultModel,
       DEFAULT_TEXT_SYSTEM_PROMPT,
-      context.cloudflare.env
+      context.cloudflare.env,
+      format_type
     );
 
     // レスポンステキストからコードブロックを除去
@@ -95,11 +96,15 @@ export async function action({ request, context }: ActionFunctionArgs) {
           }
         });
       } catch (e) {
+        console.error('JSON parse error:', e, 'Raw output:', cleanedOutput);
+        
+        // JSONパースに失敗した場合は、テキストとして返す
         return new Response(JSON.stringify({ 
           error: 'Response could not be parsed as JSON',
-          raw: cleanedOutput
+          text: cleanedOutput,
+          format_type: 'text'
         }), {
-          status: 422,
+          status: 200, // エラーではなく成功として返す
           headers: { 
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',

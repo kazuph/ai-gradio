@@ -6,6 +6,7 @@ export async function generateGemini(
   model: string,
   systemPrompt: string,
   env: Env,
+  format_type: 'text' | 'json' = 'text'
 ): Promise<LLMResponse> {
   const modelName = model.replace("gemini:", "");
   try {
@@ -20,6 +21,7 @@ export async function generateGemini(
         maxOutputTokens: 8192,
         responseMimeType: "text/plain",
       },
+      // @ts-ignore - apiVersion is supported but not in the type definitions
       apiVersion: "v1beta"  // Important for experimental models
     });
 
@@ -51,12 +53,12 @@ export async function generateGemini(
     });
 
     // Get the text content
-    let responseText;
+    let responseText: string;
     if (typeof response.text === 'function') {
       responseText = response.text();
       console.log('Function response text:', responseText);
     } else {
-      responseText = response.text;
+      responseText = response.text as string;
       console.log('Direct response text:', responseText);
     }
 
@@ -71,10 +73,10 @@ export async function generateGemini(
     if (codeBlockMatch) {
       output = codeBlockMatch[1].trim();
     } else {
-      // If no code block is found, check if the content looks like HTML
+      // テキストモードの場合は、HTMLタグで自動的に囲まないようにする
       const htmlMatch = output.match(/<[^>]+>/);
-      if (!htmlMatch) {
-        // If not HTML, wrap in a paragraph
+      if (!htmlMatch && format_type === 'json') {
+        // JSONモードでHTMLタグがない場合のみ、<p>タグで囲む
         output = `<p>${output}</p>`;
       }
     }

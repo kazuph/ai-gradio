@@ -31,13 +31,36 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
         
         // 親ウィンドウでAPIリクエストを実行
         fetch(url, options)
-          .then(response => response.json())
-          .then(data => {
+          .then(response => {
+            // レスポンスのContent-Typeを確認
+            const contentType = response.headers.get('Content-Type') || '';
+            
+            // JSONの場合はJSON形式で解析、それ以外はテキスト形式で解析
+            if (contentType.includes('application/json')) {
+              return response.json().then(data => ({
+                data,
+                contentType,
+                status: response.status,
+                ok: response.ok
+              }));
+            }
+            
+            return response.text().then(text => ({
+              data: text,
+              contentType,
+              status: response.status,
+              ok: response.ok
+            }));
+          })
+          .then(responseData => {
             // 結果をiframeに返す
             (event.source as Window)?.postMessage({
               type: 'apiResponse',
               requestId,
-              data,
+              data: responseData.data,
+              contentType: responseData.contentType,
+              status: responseData.status,
+              ok: responseData.ok,
               error: null
             }, '*');
           })
@@ -47,6 +70,9 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
               type: 'apiResponse',
               requestId,
               data: null,
+              contentType: null,
+              status: 500,
+              ok: false,
               error: error.message
             }, '*');
           });
@@ -170,7 +196,12 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                                       if (event.data.error) {
                                         reject(new Error(event.data.error));
                                       } else {
-                                        resolve(event.data.data);
+                                        resolve({
+                                          data: event.data.data,
+                                          contentType: event.data.contentType,
+                                          status: event.data.status,
+                                          ok: event.data.ok
+                                        });
                                       }
                                     }
                                   };
@@ -194,13 +225,49 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                                 if (url.toString().includes('/api/')) {
                                   return new Promise((resolve, reject) => {
                                     proxyFetch(url, options)
-                                      .then(data => {
+                                      .then(responseData => {
                                         // Response風のオブジェクトを作成
                                         const response = {
-                                          ok: true,
-                                          status: 200,
-                                          json: () => Promise.resolve(data),
-                                          text: () => Promise.resolve(JSON.stringify(data))
+                                          ok: responseData.ok,
+                                          status: responseData.status,
+                                          headers: new Headers({
+                                            'Content-Type': responseData.contentType || 'application/json'
+                                          }),
+                                          json: function() {
+                                            // JSONの場合はそのまま返す
+                                            if (typeof responseData.data === 'object') {
+                                              return Promise.resolve(responseData.data);
+                                            }
+                                            
+                                            // テキストの場合はJSONとしてパースを試みる
+                                            try {
+                                              return Promise.resolve(JSON.parse(responseData.data));
+                                            } catch (e) {
+                                              // JSONパースエラーの場合、エラーオブジェクトがあればそれを返す
+                                              if (responseData.data && typeof responseData.data === 'string') {
+                                                try {
+                                                  // レスポンスがJSONエラーオブジェクトかどうかを確認
+                                                  const errorObj = JSON.parse(responseData.data);
+                                                  if (errorObj && errorObj.error && errorObj.text) {
+                                                    // エラーメッセージとテキストを含むオブジェクトを返す
+                                                    return Promise.resolve(errorObj);
+                                                  }
+                                                } catch (innerError) {
+                                                  // 二重のJSONパースエラー、無視
+                                                }
+                                              }
+                                              
+                                              // それ以外の場合はエラーを投げる
+                                              return Promise.reject(new Error('Unexpected token, response is not valid JSON: ' + responseData.data.substring(0, 50) + '...'));
+                                            }
+                                          },
+                                          text: function() {
+                                            return Promise.resolve(
+                                              typeof responseData.data === 'string' 
+                                                ? responseData.data 
+                                                : JSON.stringify(responseData.data)
+                                            );
+                                          }
                                         };
                                         resolve(response);
                                       })
