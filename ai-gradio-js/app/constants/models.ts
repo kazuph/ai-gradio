@@ -30,10 +30,11 @@ export const DEFAULT_WEBAPP_SYSTEM_PROMPT = `You are an expert web developer. Wh
 6. Focus on creating a functional and visually appealing result.
 7. Note: This is an application running inside an iframe.
 8. IMPORTANT: DO NOT use localStorage or sessionStorage as they won't work properly in the iframe environment.
-9. For Three.js applications, use the following CDN links:
-   - Three.js core library: <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+9. For Three.js applications:
+   - Use CDN: <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
    - Optional WebGL debugging: <script src="https://greggman.github.io/webgl-lint/webgl-lint.js" crossorigin></script>
-   - Do not use integrity attributes with Three.js CDN links as they may change.`;
+   - If you need OrbitControls, import it separately as a module
+   - Do not use deprecated Three.js loading methods`;
 
 export const DEFAULT_TEXT_SYSTEM_PROMPT = `Before coding, make a plan inside a <thinking> tag.
 1. Identify core requirement
