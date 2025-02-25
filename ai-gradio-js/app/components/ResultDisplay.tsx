@@ -14,6 +14,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
   const [iframeHeights, setIframeHeights] = useState<{[key: string]: number}>({});
   const iframeRefs = useRef<{[key: string]: HTMLIFrameElement}>({});
   const [renderedResponses, setRenderedResponses] = useState<{[key: string]: boolean}>({});
+  const [copyStatus, setCopyStatus] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -111,10 +112,46 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  // バッククオートを削除する関数
-  const removeBackticks = (str: string): string => {
-    // 先頭と末尾のマークダウンコードブロック記法を削除
-    return str.replace(/^```[\w]*\n/, '').replace(/\n```$/, '');
+  // マークダウンからHTMLコードブロックを抽出する関数
+  const extractHtmlFromMarkdown = (text: string): { htmlCode: string, isMarkdown: boolean } => {
+    // HTMLコードブロックを検索
+    const htmlCodeBlockRegex = /```(?:html)?\s*\n([\s\S]*?)\n```/g;
+    const matches = [...text.matchAll(htmlCodeBlockRegex)];
+    
+    if (matches.length > 0) {
+      // 最初のHTMLコードブロックを使用
+      return { 
+        htmlCode: matches[0][1].trim(),
+        isMarkdown: true
+      };
+    }
+    
+    // マークダウン形式かどうかを判断（簡易的な判定）
+    const hasMarkdownSyntax = /(?:^|\n)(?:#{1,6}\s|[*-]\s|\d+\.\s|>\s|`{1,3}|---|===)/.test(text);
+    
+    if (hasMarkdownSyntax) {
+      // マークダウンだがHTMLコードブロックがない場合は空文字を返す
+      return { htmlCode: '', isMarkdown: true };
+    }
+    
+    // マークダウンでない場合はそのまま返す
+    return { htmlCode: text, isMarkdown: false };
+  };
+
+  // コードをクリップボードにコピーする関数
+  const copyToClipboard = async (text: string, uniqueKey: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyStatus(prev => ({ ...prev, [uniqueKey]: 'コピーしました！' }));
+      setTimeout(() => {
+        setCopyStatus(prev => ({ ...prev, [uniqueKey]: '' }));
+      }, 2000);
+    } catch (err) {
+      setCopyStatus(prev => ({ ...prev, [uniqueKey]: 'コピーに失敗しました' }));
+      setTimeout(() => {
+        setCopyStatus(prev => ({ ...prev, [uniqueKey]: '' }));
+      }, 2000);
+    }
   };
 
   // 最新の結果が上に表示されるように並び替え
@@ -137,8 +174,8 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
 
       <div className="space-y-4">
         {sortedResponses.map((result) => {
-          // outputからバッククオートを削除
-          const cleanOutput = removeBackticks(result.output);
+          // マークダウンからHTMLコードを抽出
+          const { htmlCode, isMarkdown } = extractHtmlFromMarkdown(result.output);
           // 一意のキーを作成
           const uniqueKey = `${result.model}-${result.startTime}`;
           
@@ -163,17 +200,39 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                   <div className="text-red-400">{result.error}</div>
                 ) : (
                   <div className="space-y-4">
+                    {/* マークダウンの場合は警告を表示 */}
+                    {isMarkdown && htmlCode === '' && (
+                      <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+                        <p className="font-bold">マークダウン形式のレスポンス</p>
+                        <p>HTMLコードブロックが見つかりませんでした。プレビューは表示できません。</p>
+                      </div>
+                    )}
+                    
                     {/* Preview of the generated HTML */}
                     <div className="border rounded overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setShowPreview(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
-                        className="w-full bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)] flex justify-between items-center hover:bg-opacity-80 transition-colors"
-                      >
-                        <span>Preview</span>
-                        <span>{showPreview[uniqueKey] ? '▼' : '▶'}</span>
-                      </button>
-                      {showPreview[uniqueKey] && (
+                      <div className="w-full bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)] flex justify-between items-center">
+                        <button
+                          type="button"
+                          onClick={() => setShowPreview(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
+                          className="flex items-center hover:bg-opacity-80 transition-colors"
+                        >
+                          <span>Preview</span>
+                          <span className="ml-2">{showPreview[uniqueKey] ? '▼' : '▶'}</span>
+                        </button>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-xs text-[var(--color-text-secondary)]">
+                            {htmlCode.length} 文字
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(htmlCode, uniqueKey)}
+                            className="text-xs bg-[var(--color-accent)] text-white px-2 py-1 rounded hover:bg-opacity-80 transition-colors"
+                          >
+                            {copyStatus[uniqueKey] || 'コピー'}
+                          </button>
+                        </div>
+                      </div>
+                      {showPreview[uniqueKey] && htmlCode && (
                         <iframe
                           title={`Preview ${result.model}`}
                           ref={(el) => {
@@ -181,7 +240,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                           }}
                           srcDoc={`
                             <base href="${window.location.origin}/">
-                            ${cleanOutput}
+                            ${htmlCode}
                             <script>
                               // プロキシAPIリクエスト用のヘルパー関数
                               window.proxyFetch = function(url, options = {}) {
@@ -293,21 +352,36 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                           sandbox="allow-scripts allow-forms"
                         />
                       )}
+                      {showPreview[uniqueKey] && !htmlCode && isMarkdown && (
+                        <div className="p-4 bg-white">
+                          <p className="text-gray-500 italic">プレビューできるHTMLコードがありません</p>
+                        </div>
+                      )}
                     </div>
-                    {/* Raw HTML code */}
+                    
+                    {/* Raw HTML code or full response */}
                     <div className="border rounded">
-                      <button
-                        type="button"
-                        onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
-                        className="w-full bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)] flex justify-between items-center hover:bg-opacity-80 transition-colors"
-                      >
-                        <span>HTML Code</span>
-                        <span>{showCode[uniqueKey] ? '▼' : '▶'}</span>
-                      </button>
+                      <div className="w-full bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)] flex justify-between items-center">
+                        <button
+                          type="button"
+                          onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
+                          className="flex items-center hover:bg-opacity-80 transition-colors"
+                        >
+                          <span>{isMarkdown ? "Full Response" : "HTML Code"}</span>
+                          <span className="ml-2">{showCode[uniqueKey] ? '▼' : '▶'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(isMarkdown ? result.output : htmlCode, `code-${uniqueKey}`)}
+                          className="text-xs bg-[var(--color-accent)] text-white px-2 py-1 rounded hover:bg-opacity-80 transition-colors"
+                        >
+                          {copyStatus[`code-${uniqueKey}`] || 'コピー'}
+                        </button>
+                      </div>
                       {showCode[uniqueKey] && (
                         <div className="overflow-hidden">
                           <SyntaxHighlighter
-                            language="html"
+                            language={isMarkdown ? "markdown" : "html"}
                             style={vscDarkPlus}
                             customStyle={{
                               margin: 0,
@@ -315,7 +389,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                               fontSize: '0.875rem',
                             }}
                           >
-                            {cleanOutput}
+                            {isMarkdown ? result.output : htmlCode}
                           </SyntaxHighlighter>
                         </div>
                       )}
