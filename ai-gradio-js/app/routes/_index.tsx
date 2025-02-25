@@ -48,10 +48,11 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export default function Index() {
-  const [query, setQuery] = useState('make todo app');
+  const [query, setQuery] = useState('make chat app');
   const [selectedModels, setSelectedModels] = useState<ModelType[]>(['gemini:gemini-2.0-flash']);
   const [promptType, setPromptType] = useState<PromptType>('webapp');
   const [usePlanning, setUsePlanning] = useState(false);
+  const [useLlmApi, setUseLlmApi] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [allResponses, setAllResponses] = useState<LLMResponse[]>([]);
   const [currentPlan, setCurrentPlan] = useState<string | undefined>(undefined);
@@ -65,6 +66,43 @@ export default function Index() {
       promptType === 'text' ? DEFAULT_TEXT_SYSTEM_PROMPT : DEFAULT_WEBAPP_SYSTEM_PROMPT
     );
   }, [promptType]);
+
+  useEffect(() => {
+    if (useLlmApi) {
+      // LLM APIの詳細をシステムプロンプトに追加
+      setSystemPrompt(prevPrompt => {
+        return `${prevPrompt}\n\n10. Additionally, an internal LLM API is available at POST /api/llm.
+   - To use this API, send a JSON object with:
+     * 'prompt' field containing your textual prompt
+     * 'format_type' field set to either "text" or "json"
+   - Example request for JSON response:
+     fetch('/api/llm', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({
+         prompt: 'Convert 42 to Roman numerals and return as JSON',
+         format_type: 'json'
+       })
+     })
+   - When format_type is "json", ensure your prompt asks for JSON format.
+   - Example JSON response format:
+     {
+       "number": 42,
+       "roman": "XLII"
+     }
+   - Note: Even with format_type="json", the response might be wrapped in \`\`\`json code blocks.
+     The API will automatically handle this and extract the JSON content.
+   - For text responses, omit format_type or set it to "text"
+   - The default model is gemini-2.0-flash
+   - Ensure you include proper error handling when invoking this API.`;
+      });
+    } else {
+      // LLM APIの詳細を削除して元のプロンプトに戻す
+      setSystemPrompt(
+        promptType === 'text' ? DEFAULT_TEXT_SYSTEM_PROMPT : DEFAULT_WEBAPP_SYSTEM_PROMPT
+      );
+    }
+  }, [useLlmApi, promptType]);
 
   const fetcher = useFetcher<typeof action>();
   
@@ -111,7 +149,7 @@ export default function Index() {
         });
         
         if (planResponse.ok) {
-          const planData = await planResponse.json();
+          const planData = await planResponse.json() as { plan?: string };
           if (planData.plan) {
             setCurrentPlan(planData.plan);
           }
@@ -137,7 +175,7 @@ export default function Index() {
           });
           
           if (response.ok) {
-            const result = await response.json();
+            const result = await response.json() as { output?: string; error?: string };
             const modelResponse = {
               model,
               output: result.output || '',
@@ -212,6 +250,7 @@ export default function Index() {
               <input type="hidden" name="systemPrompt" value={systemPrompt} />
               <input type="hidden" name="promptType" value={promptType} />
               <input type="hidden" name="usePlanning" value={String(usePlanning)} />
+              <input type="hidden" name="useLlmApi" value={String(useLlmApi)} />
               <QueryInput
                 query={query}
                 onChange={setQuery}
@@ -265,15 +304,27 @@ export default function Index() {
               )}
             </div>
 
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                checked={usePlanning}
-                onChange={(e) => setUsePlanning(e.target.checked)}
-                className="form-checkbox h-4 w-4 text-indigo-600"
-              />
-              <span className="ml-2">Use Planning</span>
-            </label>
+            <div className="flex space-x-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  checked={usePlanning}
+                  onChange={(e) => setUsePlanning(e.target.checked)}
+                  className="form-checkbox h-4 w-4 text-indigo-600"
+                />
+                <span className="ml-2">Use Planning</span>
+              </label>
+
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  checked={useLlmApi}
+                  onChange={(e) => setUseLlmApi(e.target.checked)}
+                  className="form-checkbox h-4 w-4 text-indigo-600"
+                />
+                <span className="ml-2">Use LLM API</span>
+              </label>
+            </div>
 
             <ModelSelector
               selectedModels={selectedModels}

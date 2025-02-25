@@ -32,7 +32,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+      <body 
+        className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]"
+        suppressHydrationWarning
+      >
         {children}
         <ScrollRestoration />
         <Scripts />

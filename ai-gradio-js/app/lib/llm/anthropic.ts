@@ -13,7 +13,7 @@ export async function generateAnthropic(
     });
 
     const response = await client.messages.create({
-      model: model.replace("anthropic:", ""),
+      model: model.replace("anthropic:", "").replace("-thinking", ""),
       messages: [
         { role: "user", content: `${systemPrompt}\n\n${query}` },
       ],

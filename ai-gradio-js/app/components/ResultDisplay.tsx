@@ -17,9 +17,39 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const { height, key } = event.data;
-      if (height && typeof key === 'string') {
-        setIframeHeights(prev => ({ ...prev, [key]: height }));
+      // iframeからの高さメッセージを処理
+      if (event.data && typeof event.data === 'object' && 'height' in event.data && 'key' in event.data) {
+        const { height, key } = event.data;
+        if (height && typeof key === 'string') {
+          setIframeHeights(prev => ({ ...prev, [key]: height }));
+        }
+      }
+      
+      // iframeからのAPIリクエストを処理
+      if (event.data && typeof event.data === 'object' && 'type' in event.data && event.data.type === 'apiRequest') {
+        const { url, options, requestId } = event.data;
+        
+        // 親ウィンドウでAPIリクエストを実行
+        fetch(url, options)
+          .then(response => response.json())
+          .then(data => {
+            // 結果をiframeに返す
+            (event.source as Window)?.postMessage({
+              type: 'apiResponse',
+              requestId,
+              data,
+              error: null
+            }, '*');
+          })
+          .catch(error => {
+            // エラーをiframeに返す
+            (event.source as Window)?.postMessage({
+              type: 'apiResponse',
+              requestId,
+              data: null,
+              error: error.message
+            }, '*');
+          });
       }
     };
 
@@ -124,8 +154,67 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                             if (el) iframeRefs.current[uniqueKey] = el;
                           }}
                           srcDoc={`
+                            <base href="${window.location.origin}/">
                             ${cleanOutput}
                             <script>
+                              // プロキシAPIリクエスト用のヘルパー関数
+                              window.proxyFetch = function(url, options = {}) {
+                                return new Promise((resolve, reject) => {
+                                  const requestId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                                  
+                                  // レスポンスハンドラを設定
+                                  const handleResponse = function(event) {
+                                    if (event.data && event.data.type === 'apiResponse' && event.data.requestId === requestId) {
+                                      window.removeEventListener('message', handleResponse);
+                                      
+                                      if (event.data.error) {
+                                        reject(new Error(event.data.error));
+                                      } else {
+                                        resolve(event.data.data);
+                                      }
+                                    }
+                                  };
+                                  
+                                  window.addEventListener('message', handleResponse);
+                                  
+                                  // 親ウィンドウにリクエストを送信
+                                  window.parent.postMessage({
+                                    type: 'apiRequest',
+                                    url,
+                                    options,
+                                    requestId
+                                  }, '*');
+                                });
+                              };
+                              
+                              // 元のfetchをオーバーライド
+                              const originalFetch = window.fetch;
+                              window.fetch = function(url, options) {
+                                // APIリクエストの場合はプロキシを使用
+                                if (url.toString().includes('/api/')) {
+                                  return new Promise((resolve, reject) => {
+                                    proxyFetch(url, options)
+                                      .then(data => {
+                                        // Response風のオブジェクトを作成
+                                        const response = {
+                                          ok: true,
+                                          status: 200,
+                                          json: () => Promise.resolve(data),
+                                          text: () => Promise.resolve(JSON.stringify(data))
+                                        };
+                                        resolve(response);
+                                      })
+                                      .catch(error => {
+                                        reject(error);
+                                      });
+                                  });
+                                }
+                                
+                                // それ以外は元のfetchを使用
+                                return originalFetch(url, options);
+                              };
+                              
+                              // 高さ調整用のスクリプト
                               window.addEventListener('load', function() {
                                 const height = document.documentElement.scrollHeight;
                                 window.parent.postMessage({ height, key: "${uniqueKey}" }, '*');
