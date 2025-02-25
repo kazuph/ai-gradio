@@ -17,7 +17,13 @@ export async function generateAnthropic(
       messages: [
         { role: "user", content: `${systemPrompt}\n\n${query}` },
       ],
-      max_tokens: 4096,
+      max_tokens: model.includes("-thinking") ? 20000 : 8192,
+      ...(model.includes("-thinking") ? {
+        thinking: {
+          type: "enabled",
+          budget_tokens: 16000
+        }
+      } : {})
     });
 
     const modelName = model.replace("anthropic:", "");

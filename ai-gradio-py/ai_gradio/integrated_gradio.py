@@ -35,6 +35,7 @@ INTEGRATED_MODELS = [
     "openai:chatgpt-4o-latest",
     "anthropic:claude-3-5-sonnet-20241022",
     "anthropic:claude-3-7-sonnet-20250219",
+    "anthropic:claude-3-7-sonnet-20250219-thinking",
     "gemini:gemini-2.0-pro-exp-02-05",
     "gemini:gemini-2.0-flash",
     "gemini:gemini-2.0-flash-lite-preview-02-05",
