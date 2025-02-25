@@ -2,12 +2,16 @@ interface QueryInputProps {
   query: string;
   onChange: (query: string) => void;
   isLoading: boolean;
+  completedRequests?: number;
+  totalRequests?: number;
 }
 
 export function QueryInput({
   query,
   onChange,
   isLoading,
+  completedRequests = 0,
+  totalRequests = 0,
 }: QueryInputProps) {
   return (
     <div className="space-y-2">
@@ -28,7 +32,9 @@ export function QueryInput({
             disabled={isLoading || !query.trim()}
             className="btn-primary w-40"
           >
-            {isLoading ? "Generating..." : "Generate"}
+            {isLoading 
+              ? `Generating... ${completedRequests}/${totalRequests}`
+              : "Generate"}
           </button>
         </div>
       </div>

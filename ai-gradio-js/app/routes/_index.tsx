@@ -15,65 +15,6 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-// SSEイベントを処理するための関数
-function handleSSEEvents(eventSource: EventSource, callbacks: {
-  onPlan?: (plan: string) => void;
-  onResult?: (result: LLMResponse) => void;
-  onComplete?: () => void;
-  onError?: (error: string) => void;
-  onConnected?: (receivedClientId: string) => void;
-}) {
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      
-      switch (data.type) {
-        case 'connected':
-          console.log('SSE connection established');
-          callbacks.onConnected?.(data.clientId);
-          break;
-        case 'plan':
-          callbacks.onPlan?.(data.plan);
-          break;
-        case 'result':
-          callbacks.onResult?.(data.result);
-          break;
-        case 'complete':
-          callbacks.onComplete?.();
-          break;
-        case 'error':
-          callbacks.onError?.(data.error);
-          break;
-        default:
-          console.warn('Unknown event type:', data.type);
-      }
-    } catch (error) {
-      console.error('Error parsing SSE event:', error);
-    }
-  };
-
-  eventSource.onerror = (error) => {
-    console.error('SSE connection error:', error);
-    
-    // 接続が確立される前にエラーが発生した場合は、再試行せずにエラーを通知
-    if (eventSource.readyState === EventSource.CONNECTING) {
-      callbacks.onError?.('接続の確立に失敗しました。サーバーが応答していません。');
-      eventSource.close();
-    } 
-    // 接続が確立された後にエラーが発生した場合は、自動的に再接続を試みる
-    else if (eventSource.readyState === EventSource.OPEN) {
-      console.log('接続が一時的に切断されました。再接続を試みています...');
-    }
-    // 接続が閉じられた場合
-    else if (eventSource.readyState === EventSource.CLOSED) {
-      callbacks.onError?.('Connection error');
-      eventSource.close();
-    }
-  };
-
-  return eventSource;
-}
-
 export async function action({ request, context }: ActionFunctionArgs) {
   const formData = await request.formData();
   const data: GenerationRequest = {
@@ -116,23 +57,14 @@ export default function Index() {
   const [currentPlan, setCurrentPlan] = useState<string | undefined>(undefined);
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_TEXT_SYSTEM_PROMPT);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
-  const [eventSource, setEventSource] = useState<EventSource | null>(null);
-  const [clientId, setClientId] = useState<string | null>(null);
+  const [completedRequests, setCompletedRequests] = useState(0);
+  const [totalRequests, setTotalRequests] = useState(0);
 
   useEffect(() => {
     setSystemPrompt(
       promptType === 'text' ? DEFAULT_TEXT_SYSTEM_PROMPT : DEFAULT_WEBAPP_SYSTEM_PROMPT
     );
   }, [promptType]);
-
-  // コンポーネントがアンマウントされたときにSSE接続を閉じる
-  useEffect(() => {
-    return () => {
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-  }, [eventSource]);
 
   const fetcher = useFetcher<typeof action>();
   
@@ -155,100 +87,106 @@ export default function Index() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
-    // 既存のSSE接続を閉じる
-    if (eventSource) {
-      eventSource.close();
-    }
-    
     // 状態をリセット
     setIsLoading(true);
     setAllResponses([]);
     setCurrentPlan(undefined);
-    setClientId(null);
-    
-    // フォームデータの準備
-    const formData = new FormData();
-    formData.append('selectedModels', JSON.stringify(selectedModels));
-    formData.append('systemPrompt', systemPrompt);
-    formData.append('promptType', promptType);
-    formData.append('usePlanning', String(usePlanning));
-    formData.append('query', query);
+    setCompletedRequests(0);
     
     try {
-      // SSE接続を開始
-      const es = new EventSource(`/api/generate?${new URLSearchParams({
-        timestamp: Date.now().toString() // キャッシュ防止
-      })}`);
+      // 合計リクエスト数を設定（プランニング + 各モデル）
+      const modelCount = selectedModels.length;
+      const planningCount = usePlanning ? 1 : 0;
+      setTotalRequests(modelCount + planningCount);
       
-      // SSEイベントハンドラを設定
-      handleSSEEvents(es, {
-        onPlan: (plan) => {
-          setCurrentPlan(plan);
-        },
-        onResult: (result) => {
-          setAllResponses(prev => [...prev, result]);
-        },
-        onComplete: () => {
-          setIsLoading(false);
-          es.close();
-        },
-        onError: (error) => {
-          console.error('SSE error:', error);
-          setIsLoading(false);
-          es.close();
-          // エラーメッセージを表示
-          setAllResponses(prev => [...prev, {
-            model: 'error',
-            output: '',
-            error: error,
-            startTime: Date.now(),
-            endTime: Date.now()
-          }]);
-        },
-        onConnected: (receivedClientId) => {
-          console.log('SSE connection established with client ID:', receivedClientId);
-          setClientId(receivedClientId);
-          
-          // クライアントIDを取得したら、POSTリクエストを送信
-          const updatedFormData = new FormData();
-          updatedFormData.append('selectedModels', JSON.stringify(selectedModels));
-          updatedFormData.append('systemPrompt', systemPrompt);
-          updatedFormData.append('promptType', promptType);
-          updatedFormData.append('usePlanning', String(usePlanning));
-          updatedFormData.append('query', query);
-          updatedFormData.append('clientId', receivedClientId);
-          
-          // SSE接続が確立された後にPOSTリクエストを送信
-          fetch('/api/generate', {
+      // プランニングが有効な場合は最初にプランを取得
+      if (usePlanning) {
+        const planFormData = new FormData();
+        planFormData.append('query', query);
+        planFormData.append('type', 'plan');
+        
+        const planResponse = await fetch('/api/generate', {
+          method: 'POST',
+          body: planFormData,
+        });
+        
+        if (planResponse.ok) {
+          const planData = await planResponse.json();
+          if (planData.plan) {
+            setCurrentPlan(planData.plan);
+          }
+        }
+        
+        // プランニングリクエストが完了したのでカウントを更新
+        setCompletedRequests(prev => prev + 1);
+      }
+      
+      // 各モデルごとに個別のリクエストを送信
+      const modelRequests = selectedModels.map(async (model) => {
+        const modelFormData = new FormData();
+        modelFormData.append('query', query);
+        modelFormData.append('model', model);
+        modelFormData.append('systemPrompt', systemPrompt);
+        modelFormData.append('promptType', promptType);
+        
+        try {
+          const startTime = Date.now();
+          const response = await fetch('/api/generate', {
             method: 'POST',
-            body: updatedFormData,
-          }).catch(error => {
-            console.error('Fetch error:', error);
-            if (es) es.close();
-            setIsLoading(false);
-            // エラーメッセージを表示
-            setAllResponses(prev => [...prev, {
-              model: 'error',
-              output: '',
-              error: error instanceof Error ? error.message : 'Failed to generate response',
-              startTime: Date.now(),
-              endTime: Date.now()
-            }]);
+            body: modelFormData,
           });
+          
+          if (response.ok) {
+            const result = await response.json();
+            const modelResponse = {
+              model,
+              output: result.output || '',
+              error: result.error,
+              startTime,
+              endTime: Date.now(),
+            };
+            
+            // 結果を状態に追加
+            setAllResponses(prev => [...prev, modelResponse]);
+          } else {
+            // エラーレスポンスの処理
+            const errorText = await response.text();
+            setAllResponses(prev => [...prev, {
+              model,
+              output: '',
+              error: `Request failed: ${errorText}`,
+              startTime,
+              endTime: Date.now(),
+            }]);
+          }
+          
+          // リクエストが完了したのでカウントを更新
+          setCompletedRequests(prev => prev + 1);
+        } catch (error) {
+          // ネットワークエラーなどの処理
+          setAllResponses(prev => [...prev, {
+            model,
+            output: '',
+            error: error instanceof Error ? error.message : 'Failed to fetch response',
+            startTime: Date.now(),
+            endTime: Date.now(),
+          }]);
+          
+          // エラーでもリクエストは完了したとみなす
+          setCompletedRequests(prev => prev + 1);
         }
       });
       
-      setEventSource(es);
-      
-      // POSTリクエストをSSE接続確立後に送信するため、ここでは送信しない
-    } catch (error) {
-      console.error('Error setting up SSE:', error);
+      // すべてのリクエストが完了したらローディング状態を解除
+      await Promise.all(modelRequests);
       setIsLoading(false);
-      // エラーメッセージを表示
+    } catch (error) {
+      console.error('Error in generation:', error);
+      setIsLoading(false);
       setAllResponses(prev => [...prev, {
         model: 'error',
         output: '',
-        error: error instanceof Error ? error.message : 'Failed to set up SSE connection',
+        error: error instanceof Error ? error.message : 'Failed to generate response',
         startTime: Date.now(),
         endTime: Date.now()
       }]);
@@ -278,6 +216,8 @@ export default function Index() {
                 query={query}
                 onChange={setQuery}
                 isLoading={isLoading}
+                completedRequests={completedRequests}
+                totalRequests={totalRequests}
               />
             </fetcher.Form>
 
@@ -347,7 +287,6 @@ export default function Index() {
       <div className="flex-1 p-4 overflow-y-auto">
         {(isLoading || allResponses.length > 0) && (
           <div className="max-w-[1200px] mx-auto">
-            {isLoading && <div className="text-center">Generating...</div>}
             <ResultDisplay responses={allResponses} plan={currentPlan} />
           </div>
         )}
