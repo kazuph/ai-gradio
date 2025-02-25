@@ -1,9 +1,9 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "ai-gradio-js"
 
-main = "./server.ts"
+main = "./worker.ts"
 workers_dev = true
-compatibility_date = "2024-09-26"
+compatibility_date = "2024-11-06"
 
 [assets]
 directory = "./build/client"

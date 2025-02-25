@@ -1,26 +1,33 @@
-import type { PlatformProxy } from 'wrangler'
+import type { Context } from "hono";
+import type { AppLoadContext } from "react-router";
+import type { PlatformProxy } from "wrangler";
 
-type GetLoadContextArgs = {
-  request: Request
+type Cloudflare = Omit<PlatformProxy<Env, IncomingRequestCfProperties>, "dispose" | "caches"> & {
+  caches: PlatformProxy<Env, IncomingRequestCfProperties>["caches"] | CacheStorage;
+};
+
+export interface HonoEnv {
+  Variables: Record<string, unknown>;
+  Bindings: Env;
+}
+
+declare module "react-router" {
+  interface AppLoadContext {
+    cloudflare: Cloudflare;
+    hono?: {
+      context: Context<HonoEnv>;
+    };
+  }
+}
+
+type GetLoadContext = (args: {
+  request: Request;
   context: {
-    cloudflare: Omit<
-      PlatformProxy<Env, IncomingRequestCfProperties>,
-      'dispose' | 'caches'
-    > & {
-      caches:
-        | PlatformProxy<Env, IncomingRequestCfProperties>['caches']
-        | CacheStorage
-    }
-  }
-}
+    cloudflare: Cloudflare;
+    hono?: { context: Context<HonoEnv> };
+  };
+}) => AppLoadContext;
 
-declare module 'react-router' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface AppLoadContext extends ReturnType<typeof getLoadContext> {
-    // This will merge the result of `getLoadContext` into the `AppLoadContext`
-  }
-}
-
-export function getLoadContext({ context }: GetLoadContextArgs) {
-  return context
-}
+export const getLoadContext: GetLoadContext = ({ context }) => {
+  return context;
+};
