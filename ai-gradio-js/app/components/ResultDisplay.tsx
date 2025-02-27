@@ -115,7 +115,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
   // マークダウンからHTMLコードブロックを抽出する関数
   const extractHtmlFromMarkdown = (text: string): { htmlCode: string, isMarkdown: boolean } => {
     // HTMLコードブロックを検索（複数の言語指定に対応する正規表現）
-    const htmlCodeBlockRegex = /```(?:html|HTML|javascript|js|jsx|ts|tsx)?\s*([\s\S]*?)```/g;
+    const htmlCodeBlockRegex = /```(?:html|HTML|javascript|js|jsx|ts|tsx)?\s*([\s\S]*?)(?:```|$)/g;
     const matches = [...text.matchAll(htmlCodeBlockRegex)];
     
     if (matches.length > 0) {
@@ -126,6 +126,16 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
       const containsHtml = /<\/?[a-z][\s\S]*>/i.test(code);
       
       if (containsHtml) {
+        // コードブロックが途中で切れている場合の処理
+        // 開始タグと終了タグの数を比較
+        const openTags = (code.match(/<[^\/][^>]*>/g) || []).length;
+        const closeTags = (code.match(/<\/[^>]*>/g) || []).length;
+        
+        // 開始タグの方が多い場合、コードが途中で切れている可能性がある
+        if (openTags > closeTags) {
+          console.log(`コードブロックが不完全な可能性があります: 開始タグ=${openTags}, 終了タグ=${closeTags}`);
+        }
+        
         return { 
           htmlCode: code,
           isMarkdown: true

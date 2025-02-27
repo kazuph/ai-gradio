@@ -28,11 +28,11 @@ export async function generateAnthropic(
       messages: [
         { role: "user", content: `${systemPrompt}\n\n${query}` },
       ],
-      max_tokens: useThinking ? 20000 : 8192,
+      max_tokens: useThinking ? 4096 * 2 : 4096,
       ...(useThinking ? {
         thinking: {
           type: "enabled",
-          budget_tokens: 16000
+          budget_tokens: 4096
         }
       } : {})
     });
@@ -48,6 +48,8 @@ export async function generateAnthropic(
         console.log(`Content ${index} (text):`, content.text);
       } else if (content.type === 'thinking') {
         console.log(`Content ${index} (thinking): [thinking content available]`);
+        // thinkingコンテンツの構造をログに出力
+        console.log(`Thinking content structure:`, Object.keys(content));
       } else if (content.type === 'redacted_thinking') {
         console.log(`Content ${index} (redacted_thinking): [redacted thinking content]`);
       } else {
@@ -56,7 +58,7 @@ export async function generateAnthropic(
     });
 
     // テキストコンテンツを抽出
-    const textContent = response.content.find(c => c.type === 'text');
+    const textContent = response.content.find(c => c.type === 'text') as { type: 'text', text: string } | undefined;
     // 思考コンテンツを抽出
     const thinkingContent = response.content.find(c => c.type === 'thinking');
 
@@ -65,7 +67,16 @@ export async function generateAnthropic(
     // テキストコンテンツがある場合はそれを返す
     // なければ思考コンテンツを返す（あれば）
     // どちらもなければ空文字を返す
-    const output = textContent?.text || (thinkingContent ? `<thinking>\n${thinkingContent.thinking}\n</thinking>` : "");
+    let output = "";
+    if (textContent?.text) {
+      output = textContent.text;
+    } else if (thinkingContent) {
+      // thinkingコンテンツの構造に応じて適切に処理
+      const thinkingText = typeof thinkingContent === 'object' && thinkingContent !== null
+        ? JSON.stringify(thinkingContent)
+        : String(thinkingContent);
+      output = `<thinking>\n${thinkingText}\n</thinking>`;
+    }
     
     return {
       model: modelName,
