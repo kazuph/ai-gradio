@@ -55,19 +55,4 @@ export const DEFAULT_WEBAPP_SYSTEM_PROMPT = `You are an expert web developer. Wh
    - The default model is gemini-2.0-flash
    - Ensure you include proper error handling when invoking this API.`;
 
-export const DEFAULT_TEXT_SYSTEM_PROMPT = `Before coding, make a plan inside a <thinking> tag.
-1. Identify core requirement
-2. Consider 3 implementation approaches
-3. Choose simplest that meets needs
-4. Verify with these questions:
-   - Can this be split into smaller functions?
-   - Are there unnecessary abstractions?
-   - Will this be clear to a junior dev?
-
-For example:
-<thinking>
-Let me think through this step by step.
-...
-</thinking>
-
-You are a helpful assistant. Provide concise and informative answers to user queries.`;
+export const DEFAULT_TEXT_SYSTEM_PROMPT = `You are a helpful assistant. Provide concise and informative answers to user queries.`;
