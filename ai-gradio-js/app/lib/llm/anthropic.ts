@@ -81,10 +81,36 @@ export async function generateAnthropic(
       
       // Thinkingモデルの場合、思考プロセスと最終回答を組み合わせる
       if (isThinkingModel && thinkingContent) {
+        // HTMLタグのみを抽出する処理
+        let cleanedContent = fullContent;
+        
+        // <html>タグがある場合、その内容のみを抽出（タグを含む）
+        const htmlMatch = fullContent.match(/<html>[\s\S]*?<\/html>/);
+        if (htmlMatch && htmlMatch[0]) {
+          // HTMLタグが見つかった場合、それを優先
+          cleanedContent = htmlMatch[0];
+        } else {
+          // HTMLタグがない場合、コードブロックの処理を行う
+          // コードブロックの前後の余分なテキストを削除
+          const codeBlockRegex = /```[\s\S]*?```/g;
+          const codeBlocks = fullContent.match(codeBlockRegex);
+          
+          if (codeBlocks && codeBlocks.length > 0) {
+            // コードブロックが1つ以上ある場合
+            // 最初のコードブロックのみを抽出（ユーザーの要求に基づく）
+            const firstCodeBlock = codeBlocks[0];
+            const startIndex = fullContent.indexOf(firstCodeBlock);
+            const endIndex = startIndex + firstCodeBlock.length;
+            
+            // コードブロックの前後の余分なテキストを削除
+            cleanedContent = fullContent.substring(startIndex, endIndex);
+          }
+        }
+        
         return {
           model: originalModelName,
           // output: `<thinking>\n${thinkingContent}\n</thinking>\n\n${fullContent}`,
-          output: `${fullContent}`,
+          output: cleanedContent,
         };
       }
       
