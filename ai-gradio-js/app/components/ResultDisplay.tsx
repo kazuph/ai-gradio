@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GenerationResponse, LLMResponse } from "../types";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
@@ -15,6 +15,24 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
   const iframeRefs = useRef<{[key: string]: HTMLIFrameElement}>({});
   const [renderedResponses, setRenderedResponses] = useState<{[key: string]: boolean}>({});
   const [copyStatus, setCopyStatus] = useState<{[key: string]: string}>({});
+  const [editableHtml, setEditableHtml] = useState<{[key: string]: string}>({});
+  const [isEditing, setIsEditing] = useState<{[key: string]: boolean}>({});
+  const textareaRefs = useRef<{[key: string]: HTMLTextAreaElement}>({});
+  
+  // テキストエリアの変更ハンドラを作成
+  const handleTextareaChange = useCallback((uniqueKey: string, e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setEditableHtml(prev => ({ ...prev, [uniqueKey]: newValue }));
+    // フォーカスを維持
+    setTimeout(() => {
+      if (textareaRefs.current[uniqueKey]) {
+        textareaRefs.current[uniqueKey].focus();
+        // カーソル位置を保持
+        const cursorPosition = e.target.selectionStart;
+        textareaRefs.current[uniqueKey].setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }, 0);
+  }, []);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -113,7 +131,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
   };
 
   // マークダウンからHTMLコードブロックを抽出する関数
-  const extractHtmlFromMarkdown = (text: string): { htmlCode: string, isMarkdown: boolean } => {
+  const extractHtmlFromMarkdown = useCallback((text: string): { htmlCode: string, isMarkdown: boolean } => {
     // HTMLコードブロックを検索（複数の言語指定に対応する正規表現）
     const htmlCodeBlockRegex = /```(?:html|HTML|javascript|js|jsx|ts|tsx)?\s*([\s\S]*?)(?:```|$)/g;
     const matches = [...text.matchAll(htmlCodeBlockRegex)];
@@ -153,7 +171,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
     
     // マークダウンでない場合はそのまま返す
     return { htmlCode: text, isMarkdown: false };
-  };
+  }, []);
 
   // コードをクリップボードにコピーする関数
   const copyToClipboard = async (text: string, uniqueKey: string) => {
@@ -171,10 +189,43 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
     }
   };
 
+  // 文字数をカウントする関数
+  const countCharacters = (str: string): number => {
+    return str.length;
+  };
+
+  // 秒数を計算する関数
+  const calculateSeconds = (start?: number, end?: number): string => {
+    if (!start || !end) return '';
+    const seconds = ((end - start) / 1000).toFixed(2);
+    return `(${seconds}秒)`;
+  };
+
   // 最新の結果が上に表示されるように並び替え
   const sortedResponses = [...responses].sort((a, b) => {
     return (b.startTime || 0) - (a.startTime || 0);
   });
+
+  // 新しいレスポンスが追加されたときに編集用のHTMLを初期化
+  useEffect(() => {
+    const newResponses = responses.filter(response => {
+      const uniqueKey = `${response.model}-${response.startTime}`;
+      return !editableHtml[uniqueKey];
+    });
+
+    if (newResponses.length > 0) {
+      const newEditableHtml = { ...editableHtml };
+      
+      for (const response of newResponses) {
+        const uniqueKey = `${response.model}-${response.startTime}`;
+        // extractHtmlFromMarkdownを使用して初期値を設定
+        const { htmlCode } = extractHtmlFromMarkdown(response.output);
+        newEditableHtml[uniqueKey] = htmlCode;
+      }
+      
+      setEditableHtml(newEditableHtml);
+    }
+  }, [responses, editableHtml, extractHtmlFromMarkdown]);
 
   return (
     <div className="space-y-6">
@@ -208,7 +259,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                   </h3>
                   <span className="text-xs text-[var(--color-text-secondary)]">
                     {result.startTime && formatTimestamp(result.startTime)}
-                    {result.endTime && ` - ${formatTimestamp(result.endTime)}`}
+                    {result.endTime && ` - ${formatTimestamp(result.endTime)} ${calculateSeconds(result.startTime, result.endTime)}`}
                   </span>
                 </div>
               </div>
@@ -225,31 +276,38 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                       </div>
                     )}
                     
+                    {/* 文字数表示 */}
+                    <div className="mb-2 text-sm text-[var(--color-text-secondary)]">
+                      文字数: {countCharacters(editableHtml[uniqueKey] || htmlCode)}
+                    </div>
+                    
                     {/* Preview of the generated HTML */}
                     <div className="border rounded overflow-hidden">
                       <div className="w-full bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)] flex justify-between items-center">
-                        <button
-                          type="button"
-                          onClick={() => setShowPreview(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
-                          className="flex items-center hover:bg-opacity-80 transition-colors"
-                        >
-                          <span>Preview</span>
-                          <span className="ml-2">{showPreview[uniqueKey] ? '▼' : '▶'}</span>
-                        </button>
+                        <div className="flex-1 text-left flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowPreview(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
+                            className="flex items-center"
+                          >
+                            <span>Preview</span>
+                            <span className="ml-2">{showPreview[uniqueKey] ? '▼' : '▶'}</span>
+                          </button>
+                        </div>
                         <div className="flex items-center space-x-3">
                           <span className="text-xs text-[var(--color-text-secondary)]">
-                            {htmlCode.length} 文字
+                            {(editableHtml[uniqueKey] || htmlCode).length} 文字
                           </span>
                           <button
                             type="button"
-                            onClick={() => copyToClipboard(htmlCode, uniqueKey)}
+                            onClick={() => copyToClipboard(editableHtml[uniqueKey] || htmlCode, uniqueKey)}
                             className="text-xs bg-[var(--color-accent)] text-white px-2 py-1 rounded hover:bg-opacity-80 transition-colors"
                           >
                             {copyStatus[uniqueKey] || 'コピー'}
                           </button>
                         </div>
                       </div>
-                      {showPreview[uniqueKey] && htmlCode && (
+                      {showPreview[uniqueKey] && (
                         <iframe
                           title={`Preview ${result.model}`}
                           ref={(el) => {
@@ -257,7 +315,7 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                           }}
                           srcDoc={`
                             <base href="${window.location.origin}/">
-                            ${htmlCode}
+                            ${editableHtml[uniqueKey] || htmlCode}
                             <script>
                               // プロキシAPIリクエスト用のヘルパー関数
                               window.proxyFetch = function(url, options = {}) {
@@ -376,38 +434,67 @@ export function ResultDisplay({ responses, plan }: ResultDisplayProps) {
                       )}
                     </div>
                     
-                    {/* Raw HTML code or full response */}
-                    <div className="border rounded">
+                    {/* HTML Code with edit functionality */}
+                    <div className="border rounded mt-4">
                       <div className="w-full bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium border-b text-[var(--color-text-primary)] flex justify-between items-center">
-                        <button
-                          type="button"
-                          onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
-                          className="flex items-center hover:bg-opacity-80 transition-colors"
-                        >
-                          <span>{isMarkdown ? "Full Response" : "HTML Code"}</span>
-                          <span className="ml-2">{showCode[uniqueKey] ? '▼' : '▶'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(isMarkdown ? result.output : htmlCode, `code-${uniqueKey}`)}
-                          className="text-xs bg-[var(--color-accent)] text-white px-2 py-1 rounded hover:bg-opacity-80 transition-colors"
-                        >
-                          {copyStatus[`code-${uniqueKey}`] || 'コピー'}
-                        </button>
+                        <div className="flex-1 text-left flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
+                            className="flex items-center"
+                          >
+                            <span>{isMarkdown ? "Full Response" : "HTML Code"}</span>
+                            <span className="ml-2">{showCode[uniqueKey] ? '▼' : '▶'}</span>
+                          </button>
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditing(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }));
+                              // 編集モードをオンにするときはプレビューも表示
+                              if (!isEditing[uniqueKey]) {
+                                setShowPreview(prev => ({ ...prev, [uniqueKey]: true }));
+                                setShowCode(prev => ({ ...prev, [uniqueKey]: true }));
+                              }
+                            }}
+                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                          >
+                            {isEditing[uniqueKey] ? '編集終了' : '編集する'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(isMarkdown ? result.output : (editableHtml[uniqueKey] || htmlCode), `code-${uniqueKey}`)}
+                            className="px-2 py-1 bg-green-500 text-white rounded text-xs"
+                          >
+                            {copyStatus[`code-${uniqueKey}`] || 'コピー'}
+                          </button>
+                        </div>
                       </div>
                       {showCode[uniqueKey] && (
                         <div className="overflow-hidden">
-                          <SyntaxHighlighter
-                            language={isMarkdown ? "markdown" : "html"}
-                            style={vscDarkPlus}
-                            customStyle={{
-                              margin: 0,
-                              borderRadius: 0,
-                              fontSize: '0.875rem',
-                            }}
-                          >
-                            {isMarkdown ? result.output : htmlCode}
-                          </SyntaxHighlighter>
+                          {isEditing[uniqueKey] ? (
+                            <textarea
+                              ref={(el) => {
+                                if (el) textareaRefs.current[uniqueKey] = el;
+                              }}
+                              value={editableHtml[uniqueKey] || htmlCode}
+                              onChange={(e) => handleTextareaChange(uniqueKey, e)}
+                              className="w-full p-2 font-mono text-sm h-64 bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-none"
+                            />
+                          ) : (
+                            <SyntaxHighlighter
+                              language={isMarkdown ? "markdown" : "html"}
+                              style={vscDarkPlus}
+                              customStyle={{
+                                margin: 0,
+                                borderRadius: 0,
+                                fontSize: '0.875rem',
+                              }}
+                            >
+                              {isMarkdown ? result.output : (editableHtml[uniqueKey] || htmlCode)}
+                            </SyntaxHighlighter>
+                          )}
                         </div>
                       )}
                     </div>

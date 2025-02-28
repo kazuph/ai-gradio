@@ -15,7 +15,7 @@
     "validate": "pnpm run lint && pnpm run format && pnpm run typecheck"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.18.0",
+    "@anthropic-ai/sdk": "^0.37.0",
     "@google/generative-ai": "^0.22.0",
     "@hono/vite-dev-server": "^0.18.2",
     "@react-router/cloudflare": "7.2.0",
@@ -49,7 +49,7 @@
     "typescript": "^5.7.3",
     "vite": "^5.4.14",
     "vite-tsconfig-paths": "^5.1.4",
-    "wrangler": "^3.109.3"
+    "wrangler": "^3.111.0"
   },
   "engines": {
     "node": ">=20.0.0"

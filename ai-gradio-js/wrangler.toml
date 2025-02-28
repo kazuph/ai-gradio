@@ -10,3 +10,4 @@ directory = "./build/client"
 
 [build]
 command = "pnpm run build"
+upload.format = "modules"
