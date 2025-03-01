@@ -338,7 +338,7 @@ export default function Index() {
       <div className="flex-1 p-4 overflow-y-auto">
         {(isLoading || allResponses.length > 0) && (
           <div className="max-w-[1200px] mx-auto">
-            <ResultDisplay responses={allResponses} plan={currentPlan} />
+            <ResultDisplay responses={allResponses} plan={currentPlan} promptType={promptType} />
           </div>
         )}
       </div>
