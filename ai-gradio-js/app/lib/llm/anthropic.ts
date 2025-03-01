@@ -28,7 +28,7 @@ export async function generateAnthropic(
       // リクエストオプションを設定
       const requestOptions: Anthropic.MessageCreateParams = {
         model: modelName,
-        max_tokens: isThinkingModel ? 16000 : 4096,
+        max_tokens: isThinkingModel ? 36000 : 20000,
         messages: [
           { role: "user", content: query },
         ],
@@ -43,7 +43,7 @@ export async function generateAnthropic(
       if (isThinkingModel) {
         requestOptions.thinking = {
           type: "enabled",
-          budget_tokens: 12000, // 思考プロセスに使用するトークンの最大数
+          budget_tokens: 16000, // 思考プロセスに使用するトークンの最大数
         };
       }
       
