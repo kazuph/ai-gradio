@@ -4,6 +4,8 @@ import gradio as gr
 import modelscope_studio.components.antd as antd
 import modelscope_studio.components.base as ms
 import re
+import requests
+import zlib
 
 # 追加：OpenAI API を利用するためのimport（必要に応じて環境変数などでapi_keyを設定してください）
 import openai
@@ -95,6 +97,108 @@ Let me think through this step by step.
 </thinking>
 
 You are a helpful assistant. Provide concise and informative answers to user queries."""
+
+# Excalidraw図用のシステムプロンプト
+DEFAULT_EXCALIDRAW_SYSTEM_PROMPT = """You are an expert diagram creator using Excalidraw format. When asked to create a diagram:
+1. Always respond with ONLY valid Excalidraw JSON format wrapped in ```json code blocks.
+2. Follow the Excalidraw JSON schema with required fields: type, version, source, elements.
+3. Each element should have appropriate properties like type, x, y, width, height, etc.
+4. Do not include any explanations or text outside the JSON code block.
+5. Focus on creating clear, visually effective diagrams.
+6. The diagram will be rendered using kroki.io's Excalidraw renderer.
+
+Example of valid Excalidraw JSON format:
+```json
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "type": "rectangle",
+      "version": 175,
+      "versionNonce": 279344008,
+      "isDeleted": false,
+      "id": "2ZYh24ed28FJ0yE-S3YNY",
+      "fillStyle": "hachure",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "angle": 0,
+      "x": 580,
+      "y": 140,
+      "strokeColor": "#000000",
+      "backgroundColor": "#15aabf",
+      "width": 80,
+      "height": 20,
+      "seed": 521916552,
+      "groupIds": [],
+      "strokeSharpness": "sharp",
+      "boundElementIds": []
+    }
+  ]
+}
+```"""
+
+# GraphViz図用のシステムプロンプト
+DEFAULT_GRAPHVIZ_SYSTEM_PROMPT = """You are an expert diagram creator using GraphViz DOT language. When asked to create a diagram:
+1. Always respond with ONLY valid GraphViz DOT code wrapped in ```graphviz code blocks.
+2. Use appropriate node shapes, colors, and edge styles to create clear visualizations.
+3. Do not include any explanations or text outside the code block.
+4. Focus on creating clear, visually effective diagrams.
+5. The diagram will be rendered using kroki.io's GraphViz renderer.
+
+Example of valid GraphViz DOT code:
+```graphviz
+digraph G {
+  rankdir=LR;
+  node [shape=box, style=filled, fillcolor=lightblue];
+  
+  A [label="Start"];
+  B [label="Process"];
+  C [label="Decision", shape=diamond, fillcolor=lightyellow];
+  D [label="End"];
+  
+  A -> B;
+  B -> C;
+  C -> D [label="Yes"];
+  C -> B [label="No"];
+}
+```"""
+
+# Mermaid図用のシステムプロンプト
+DEFAULT_MERMAID_SYSTEM_PROMPT = """You are an expert diagram creator using Mermaid syntax. When asked to create a diagram:
+1. Always respond with ONLY valid Mermaid code wrapped in ```mermaid code blocks.
+2. Use appropriate Mermaid diagram types: flowchart, sequence, class, state, entity-relationship, gantt, pie, etc.
+3. Do not include any explanations or text outside the code block.
+4. Focus on creating clear, visually effective diagrams.
+5. The diagram will be rendered using kroki.io's Mermaid renderer.
+
+Example of valid Mermaid code:
+```mermaid
+graph TD
+    A[Start] --> B{Is it?}
+    B -->|Yes| C[OK]
+    C --> D[Rethink]
+    D --> B
+    B ---->|No| E[End]
+```
+
+Or for a sequence diagram:
+```mermaid
+sequenceDiagram
+    participant Alice
+    participant Bob
+    Alice->>John: Hello John, how are you?
+    loop Healthcheck
+        John->>John: Fight against hypochondria
+    end
+    Note right of John: Rational thoughts <br/>prevail!
+    John-->>Alice: Great!
+    John->>Bob: How about you?
+    Bob-->>John: Jolly good!
+```"""
 
 # 各provider毎のLLM生成関数の実装を更新
 def generate_openai(query, model, system_prompt, prompt_type):
@@ -543,6 +647,74 @@ async def generate_parallel(query, selected_models, system_prompt, prompt_type, 
     logger.info("Completed generating HTML grid")
     return grid_html
 
+# Kroki.ioを使ってSVGを取得する関数
+def get_kroki_svg(diagram_source, diagram_type):
+    """
+    Kroki.ioを使って図のSVGを取得する
+    
+    Args:
+        diagram_source (str): 図のソースコード
+        diagram_type (str): 図のタイプ (excalidraw, graphviz, mermaid)
+        
+    Returns:
+        str: SVG形式の図、エラーの場合はエラーメッセージ
+    """
+    try:
+        # POSTリクエストを使用する方法
+        url = f"https://kroki.io/{diagram_type}/svg"
+        headers = {
+            "Content-Type": "text/plain"
+        }
+        response = requests.post(url, headers=headers, data=diagram_source)
+        
+        if response.status_code == 200:
+            return response.text
+        else:
+            # エラーの場合はエラーメッセージを返す
+            return f"<div class='error'>Error: {response.status_code} - {response.text}</div>"
+    except Exception as e:
+        logger.error(f"Error getting SVG from Kroki.io: {str(e)}")
+        return f"<div class='error'>Error: {str(e)}</div>"
+
+# 図のプレビューを表示する関数
+def send_to_diagram_preview(diagram_source, diagram_type):
+    """
+    図のソースコードからSVGを取得してプレビューを表示する
+    
+    Args:
+        diagram_source (str): 図のソースコード
+        diagram_type (str): 図のタイプ (excalidraw, graphviz, mermaid)
+        
+    Returns:
+        str: HTMLコンテンツ
+    """
+    # コードブロックから図のソースコードを抽出
+    pattern = r"```(?:" + diagram_type + r")?\s*([\s\S]*?)\s*```"
+    match = re.search(pattern, diagram_source, re.IGNORECASE)
+    
+    if match:
+        source_code = match.group(1).strip()
+        svg_content = get_kroki_svg(source_code, diagram_type)
+        
+        html_content = f"""
+        <div class="result-card">
+            <div class="card-header" style="display: flex; justify-content: space-between; padding: 8px 16px; align-items: center;">
+                <div class="header-title">
+                    <strong>{diagram_type.capitalize()} Diagram</strong>
+                </div>
+            </div>
+            <div class="diagram-preview" style="padding: 16px; overflow: auto;">
+                {svg_content}
+            </div>
+            <div class="code-content">
+                <pre><code>{source_code}</code></pre>
+            </div>
+        </div>
+        """
+        return html_content
+    else:
+        return f"<div class='error'>Error: No {diagram_type} code block found in the response.</div>"
+
 # 統合Gradioインターフェースの定義
 def build_interface():
     custom_css = """
@@ -702,6 +874,28 @@ def build_interface():
         line-height: 1.5;
         color: inherit;
     }
+
+    /* 図のプレビュー用スタイル */
+    .diagram-preview {
+        padding: 16px;
+        background: white;
+        border-radius: 4px;
+        overflow: auto;
+        text-align: center;
+    }
+
+    .diagram-preview svg {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .error {
+        color: red;
+        padding: 16px;
+        background: #ffeeee;
+        border-radius: 4px;
+        margin: 16px;
+    }
     """
     with gr.Blocks(
         css=custom_css,
@@ -725,7 +919,7 @@ def build_interface():
             with gr.Column(scale=1):
                 # テキスト入力エリア
                 query_input = gr.Textbox(
-                    placeholder="作成したいWebアプリの仕様を記載してください",
+                    placeholder="作成したいWebアプリや図の仕様を記載してください",
                     label="Request",
                     lines=8
                 )
@@ -756,13 +950,13 @@ def build_interface():
             with gr.Column(scale=1):
                 # システムプロンプト選択ラジオボタン
                 prompt_type = gr.Radio(
-                    ["Web App", "Text"],
+                    ["Web App", "Text", "Excalidraw", "GraphViz", "Mermaid"],
                     label="Prompt Type",
                     value="Web App",
                     interactive=True
                 )
 
-                # システムプロンプト入力欄 (Web App 用, Text用)
+                # システムプロンプト入力欄 (Web App 用, Text用, Excalidraw用, GraphViz用, Mermaid用)
                 system_prompt_webapp_textbox = gr.Textbox(
                     placeholder="Enter system prompt for web app generation...",
                     label="System Prompt (Web App)",
@@ -775,6 +969,27 @@ def build_interface():
                     label="System Prompt (Text)",
                     lines=5,
                     value=DEFAULT_TEXT_SYSTEM_PROMPT,
+                    visible=False
+                )
+                system_prompt_excalidraw_textbox = gr.Textbox(
+                    placeholder="Enter system prompt for Excalidraw diagram generation...",
+                    label="System Prompt (Excalidraw)",
+                    lines=5,
+                    value=DEFAULT_EXCALIDRAW_SYSTEM_PROMPT,
+                    visible=False
+                )
+                system_prompt_graphviz_textbox = gr.Textbox(
+                    placeholder="Enter system prompt for GraphViz diagram generation...",
+                    label="System Prompt (GraphViz)",
+                    lines=5,
+                    value=DEFAULT_GRAPHVIZ_SYSTEM_PROMPT,
+                    visible=False
+                )
+                system_prompt_mermaid_textbox = gr.Textbox(
+                    placeholder="Enter system prompt for Mermaid diagram generation...",
+                    label="System Prompt (Mermaid)",
+                    lines=5,
+                    value=DEFAULT_MERMAID_SYSTEM_PROMPT,
                     visible=False
                 )
 
@@ -800,14 +1015,45 @@ def build_interface():
         )
 
         # プロンプトタイプに応じて system_prompt を決定する関数
-        def get_system_prompt(prompt_type, webapp_prompt, text_prompt):
+        def get_system_prompt(prompt_type, webapp_prompt, text_prompt, excalidraw_prompt, graphviz_prompt, mermaid_prompt):
             if prompt_type == "Web App":
-                return webapp_prompt  # 編集された、またはデフォルトのWeb App用プロンプト
+                return webapp_prompt
+            elif prompt_type == "Text":
+                return text_prompt
+            elif prompt_type == "Excalidraw":
+                return excalidraw_prompt
+            elif prompt_type == "GraphViz":
+                return graphviz_prompt
+            elif prompt_type == "Mermaid":
+                return mermaid_prompt
             else:
-                return text_prompt  # 編集された、またはデフォルトのText用プロンプト
+                return webapp_prompt  # デフォルト
+
+        # プロンプトタイプの変更に応じてシステムプロンプト入力欄の表示/非表示を切り替える
+        def update_system_prompt_visibility(prompt_type):
+            return {
+                system_prompt_webapp_textbox: prompt_type == "Web App",
+                system_prompt_text_textbox: prompt_type == "Text",
+                system_prompt_excalidraw_textbox: prompt_type == "Excalidraw",
+                system_prompt_graphviz_textbox: prompt_type == "GraphViz",
+                system_prompt_mermaid_textbox: prompt_type == "Mermaid"
+            }
+
+        # プロンプトタイプの変更イベントを設定
+        prompt_type.change(
+            fn=update_system_prompt_visibility,
+            inputs=[prompt_type],
+            outputs=[
+                system_prompt_webapp_textbox,
+                system_prompt_text_textbox,
+                system_prompt_excalidraw_textbox,
+                system_prompt_graphviz_textbox,
+                system_prompt_mermaid_textbox
+            ]
+        )
 
         # ボタンクリック時の処理を更新
-        async def run_generate(q, m, pt, wp, tp, up):
+        async def run_generate(q, m, pt, wp, tp, ep, gp, mp, up):
             try:
                 # 非ブロッキングでのロック取得を試みる（タイムアウトを短く設定）
                 await asyncio.wait_for(generation_lock.acquire(), timeout=0.001)
@@ -828,11 +1074,17 @@ def build_interface():
 
                 result = await generate_parallel(
                     q, m,
-                    get_system_prompt(pt, wp, tp),
+                    get_system_prompt(pt, wp, tp, ep, gp, mp),
                     pt,
                     use_planning=use_plan
                 )
 
+                # 図の場合はKroki.ioを使ってプレビューを表示
+                if pt in ["Excalidraw", "GraphViz", "Mermaid"]:
+                    diagram_type = pt.lower()
+                    diagram_preview = send_to_diagram_preview(result, diagram_type)
+                    return [plan_output, diagram_preview]
+                
                 return [plan_output, result]
             finally:
                 generation_lock.release()
@@ -846,6 +1098,9 @@ def build_interface():
                 prompt_type,
                 system_prompt_webapp_textbox,
                 system_prompt_text_textbox,
+                system_prompt_excalidraw_textbox,
+                system_prompt_graphviz_textbox,
+                system_prompt_mermaid_textbox,
                 use_planning
             ],
             outputs=[plan_output, output_html]

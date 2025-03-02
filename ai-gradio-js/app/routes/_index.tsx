@@ -3,7 +3,13 @@ import { useFetcher, type ActionFunctionArgs, type MetaFunction } from 'react-ro
 import { ModelSelector } from '../components/ModelSelector';
 import { QueryInput } from '../components/QueryInput';
 import { ResultDisplay } from '../components/ResultDisplay';
-import { DEFAULT_TEXT_SYSTEM_PROMPT, DEFAULT_WEBAPP_SYSTEM_PROMPT } from '../constants/models';
+import { 
+  DEFAULT_TEXT_SYSTEM_PROMPT, 
+  DEFAULT_WEBAPP_SYSTEM_PROMPT,
+  DEFAULT_EXCALIDRAW_SYSTEM_PROMPT,
+  DEFAULT_GRAPHVIZ_SYSTEM_PROMPT,
+  DEFAULT_MERMAID_SYSTEM_PROMPT
+} from '../constants/models';
 import type { GenerationRequest, GenerationResponse, LLMResponse, ModelType, PromptType } from '../types';
 
 import { generate } from '../lib/llm';
@@ -56,15 +62,32 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(false);
   const [allResponses, setAllResponses] = useState<LLMResponse[]>([]);
   const [currentPlan, setCurrentPlan] = useState<string | undefined>(undefined);
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_TEXT_SYSTEM_PROMPT);
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_WEBAPP_SYSTEM_PROMPT);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [completedRequests, setCompletedRequests] = useState(0);
   const [totalRequests, setTotalRequests] = useState(0);
 
   useEffect(() => {
-    setSystemPrompt(
-      promptType === 'text' ? DEFAULT_TEXT_SYSTEM_PROMPT : DEFAULT_WEBAPP_SYSTEM_PROMPT
-    );
+    // プロンプトタイプに応じてシステムプロンプトを設定
+    switch (promptType) {
+      case 'text':
+        setSystemPrompt(DEFAULT_TEXT_SYSTEM_PROMPT);
+        break;
+      case 'webapp':
+        setSystemPrompt(DEFAULT_WEBAPP_SYSTEM_PROMPT);
+        break;
+      case 'excalidraw':
+        setSystemPrompt(DEFAULT_EXCALIDRAW_SYSTEM_PROMPT);
+        break;
+      case 'graphviz':
+        setSystemPrompt(DEFAULT_GRAPHVIZ_SYSTEM_PROMPT);
+        break;
+      case 'mermaid':
+        setSystemPrompt(DEFAULT_MERMAID_SYSTEM_PROMPT);
+        break;
+      default:
+        setSystemPrompt(DEFAULT_WEBAPP_SYSTEM_PROMPT);
+    }
   }, [promptType]);
 
   useEffect(() => {
@@ -260,7 +283,7 @@ export default function Index() {
               />
             </fetcher.Form>
 
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4">
               <label className="inline-flex items-center">
                 <input
                   type="radio"
@@ -269,7 +292,7 @@ export default function Index() {
                   onChange={(e) => setPromptType(e.target.value as PromptType)}
                   className="form-radio h-4 w-4 text-[var(--color-accent)]"
                 />
-                <span className="ml-2">Text Generation</span>
+                <span className="ml-2">Text</span>
               </label>
               <label className="inline-flex items-center">
                 <input
@@ -279,7 +302,37 @@ export default function Index() {
                   onChange={(e) => setPromptType(e.target.value as PromptType)}
                   className="form-radio h-4 w-4 text-[var(--color-accent)]"
                 />
-                <span className="ml-2">Web App Generation</span>
+                <span className="ml-2">Web App</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  value="excalidraw"
+                  checked={promptType === 'excalidraw'}
+                  onChange={(e) => setPromptType(e.target.value as PromptType)}
+                  className="form-radio h-4 w-4 text-[var(--color-accent)]"
+                />
+                <span className="ml-2">Excalidraw</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  value="graphviz"
+                  checked={promptType === 'graphviz'}
+                  onChange={(e) => setPromptType(e.target.value as PromptType)}
+                  className="form-radio h-4 w-4 text-[var(--color-accent)]"
+                />
+                <span className="ml-2">GraphViz</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  value="mermaid"
+                  checked={promptType === 'mermaid'}
+                  onChange={(e) => setPromptType(e.target.value as PromptType)}
+                  className="form-radio h-4 w-4 text-[var(--color-accent)]"
+                />
+                <span className="ml-2">Mermaid</span>
               </label>
             </div>
 

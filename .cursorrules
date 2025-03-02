@@ -1,0 +1,12 @@
+## LLMにアプリケーションを作らせるためのサービス
+
+ai-gradio-js/
+
+- React Router v7 を使用しています。Next.jsの実装はしないで。
+- deployはcloudflare pagesです。envの取り方などはすでにある実装を確認してからお願いいます。
+
+
+## python実装
+ai-gradio-py/
+
+現在使ってません。

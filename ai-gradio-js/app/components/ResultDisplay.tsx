@@ -142,6 +142,14 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
       };
     }
     
+    // 図表示モードの場合は図のコードを返す
+    if (promptType === 'excalidraw' || promptType === 'graphviz' || promptType === 'mermaid') {
+      return {
+        htmlCode: text,
+        isMarkdown: false
+      };
+    }
+    
     // HTMLコードブロックを検索（複数の言語指定に対応する正規表現）
     const htmlCodeBlockRegex = /```(?:html|HTML|javascript|js|jsx|ts|tsx)?\s*([\s\S]*?)(?:```|$)/g;
     const matches = [...text.matchAll(htmlCodeBlockRegex)];
@@ -252,10 +260,39 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
 
       <div className="space-y-4">
         {sortedResponses.map((result) => {
-          // マークダウンからHTMLコードを抽出
-          const { htmlCode, isMarkdown } = extractHtmlFromMarkdown(result.output);
-          // 一意のキーを作成
           const uniqueKey = `${result.model}-${result.startTime}`;
+          const { htmlCode, isMarkdown } = extractHtmlFromMarkdown(result.output);
+          
+          // 図表示モードの場合は直接HTMLを表示
+          if ((promptType === 'excalidraw' || promptType === 'graphviz' || promptType === 'mermaid') && !isEditing[uniqueKey]) {
+            return (
+              <div key={uniqueKey} className="card">
+                <div className="card-header flex justify-between items-center p-4">
+                  <div className="flex items-center">
+                    <span className="font-medium">{result.model}</span>
+                    <span className="text-sm text-[var(--color-text-secondary)] ml-2">
+                      {result.startTime && formatTimestamp(result.startTime)} {calculateSeconds(result.startTime, result.endTime)}
+                    </span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => copyToClipboard(result.output, uniqueKey)}
+                      className="btn-icon"
+                      title="Copy code"
+                      type="button"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                      {copyStatus[uniqueKey] && <span className="ml-2">{copyStatus[uniqueKey]}</span>}
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4" dangerouslySetInnerHTML={{ __html: htmlCode }} />
+              </div>
+            );
+          }
           
           return (
             <div

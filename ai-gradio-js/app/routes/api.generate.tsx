@@ -2,8 +2,14 @@ import type { ActionFunctionArgs } from 'react-router';
 import { generateGemini } from '../lib/llm/gemini';
 import { generateOpenAI } from '../lib/llm/openai';
 import { generateAnthropic } from '../lib/llm/anthropic';
-import { DEFAULT_TEXT_SYSTEM_PROMPT } from '../constants/models';
+import { DEFAULT_TEXT_SYSTEM_PROMPT, DEFAULT_EXCALIDRAW_SYSTEM_PROMPT, DEFAULT_GRAPHVIZ_SYSTEM_PROMPT, DEFAULT_MERMAID_SYSTEM_PROMPT } from '../constants/models';
 import type { ModelType, PromptType } from '../types';
+// @ts-ignore
+import { json } from '@remix-run/cloudflare';
+import { OpenAI } from 'openai';
+import { Anthropic as AnthropicSDK } from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateDiagramPreview } from '../lib/kroki';
 
 async function getImplementationPlan(query: string, env: Env): Promise<string> {
   try {
@@ -48,19 +54,26 @@ async function generateForModel(
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  // リクエストがPOSTメソッドかチェック
-  if (request.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
-  }
-
   try {
     // フォームデータを取得
     const formData = await request.formData();
-    const type = formData.get('type');
+    const query = formData.get('query') as string;
+    const model = formData.get('model') as string;
+    let systemPrompt = formData.get('systemPrompt') as string;
+    const promptType = formData.get('promptType') as string;
+    const type = formData.get('type') as string;
     
+    // Override systemPrompt if diagram type is selected
+    if (promptType === 'excalidraw') {
+      systemPrompt = DEFAULT_EXCALIDRAW_SYSTEM_PROMPT;
+    } else if (promptType === 'graphviz') {
+      systemPrompt = DEFAULT_GRAPHVIZ_SYSTEM_PROMPT;
+    } else if (promptType === 'mermaid') {
+      systemPrompt = DEFAULT_MERMAID_SYSTEM_PROMPT;
+    }
+
     // プランニングリクエストの処理
     if (type === 'plan') {
-      const query = formData.get('query') as string;
       const plan = await getImplementationPlan(query, context.cloudflare.env);
       return new Response(JSON.stringify({ plan }), {
         headers: { 'Content-Type': 'application/json' },
@@ -68,15 +81,24 @@ export async function action({ request, context }: ActionFunctionArgs) {
     }
     
     // 通常の生成リクエストの処理
-    const query = formData.get('query') as string;
-    const model = formData.get('model') as ModelType;
-    const systemPrompt = formData.get('systemPrompt') as string;
-    const promptType = formData.get('promptType') as PromptType;
-    
-    // 単一モデルの生成を実行
     const startTime = Date.now();
+    
     try {
-      const response = await generateForModel(model, query, systemPrompt, context.cloudflare.env);
+      const response = await generateForModel(model as ModelType, query, systemPrompt, context.cloudflare.env);
+      
+      // 図表示用の処理
+      if (promptType === 'excalidraw' || promptType === 'graphviz' || promptType === 'mermaid') {
+        const diagramHtml = await generateDiagramPreview(response.output, promptType);
+        return new Response(JSON.stringify({
+          model,
+          output: diagramHtml,
+          startTime,
+          endTime: Date.now(),
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      
       return new Response(JSON.stringify({
         model,
         output: response.output,

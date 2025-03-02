@@ -1,5 +1,5 @@
 export type ModelType = string;
-export type PromptType = 'text' | 'webapp';
+export type PromptType = 'text' | 'webapp' | 'excalidraw' | 'graphviz' | 'mermaid';
 
 export interface LLMResponse {
   model: string;
