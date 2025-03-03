@@ -393,16 +393,24 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                                 const newDisplay = currentDisplay === 'none' ? 'block' : 'none';
                                 previewContainer.style.display = newDisplay;
                                 
-                                // 「開く」操作の場合は、プレビューを再生成
-                                if (newDisplay === 'block' && previewElement) {
-                                  previewContainer.innerHTML = '';
-                                  const previewDiv = document.createElement('div');
-                                  previewDiv.id = previewKey;
-                                  previewDiv.innerHTML = result.output;
-                                  previewDiv.className = 'webapp-preview';
-                                  previewDiv.style.color = 'black';
-                                  previewContainer.appendChild(previewDiv);
-                                }
+                              // 「開く」操作の場合は、iframeを再生成
+                              if (newDisplay === 'block') {
+                                previewContainer.innerHTML = '';
+                                const iframe = document.createElement('iframe');
+                                iframe.id = previewKey;
+                                // <base>タグを追加して相対パスの基準URLを設定
+                                const baseUrl = window.location.origin;
+                                const contentWithBase = result.output.includes('<head>') 
+                                  ? result.output.replace('<head>', `<head><base href="${baseUrl}/">`) 
+                                  : `<!DOCTYPE html><html><head><base href="${baseUrl}/"></head><body>${result.output}</body></html>`;
+                                
+                                iframe.setAttribute("srcdoc", contentWithBase);
+                                iframe.title = "Web App Preview";
+                                iframe.className = "webapp-preview w-full h-full border-0";
+                                iframe.setAttribute("sandbox", "allow-scripts allow-forms allow-same-origin");
+                                iframe.style.backgroundColor = "white";
+                                previewContainer.appendChild(iframe);
+                              }
                               }
                             }}
                             className="flex items-center text-sm font-medium text-[var(--color-text-primary)]"
@@ -423,12 +431,17 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                         <div 
                           id={`preview-container-${uniqueKey}`}
                           className="relative border rounded p-4 bg-white overflow-auto mb-4"
+                          style={{ height: '500px' }}
                         >
-                          <div
+                          <iframe
                             id={`preview-${uniqueKey}`}
-                            dangerouslySetInnerHTML={{ __html: result.output }}
-                            className="webapp-preview"
-                            style={{ color: 'black' }}  // テキスト色を強制的に黒に設定
+                            srcDoc={result.output.includes('<head>') 
+                              ? result.output.replace('<head>', `<head><base href="${window.location.origin}/">`) 
+                              : `<!DOCTYPE html><html><head><base href="${window.location.origin}/"></head><body>${result.output}</body></html>`}
+                            title="Web App Preview"
+                            className="webapp-preview w-full h-full border-0"
+                            sandbox="allow-scripts allow-forms allow-same-origin"
+                            style={{ backgroundColor: 'white' }}
                           />
                         </div>
                         
