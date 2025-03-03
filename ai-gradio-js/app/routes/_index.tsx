@@ -68,7 +68,7 @@ export default function Index() {
   const [totalRequests, setTotalRequests] = useState(0);
   const [defaultQueries, setDefaultQueries] = useState({
     text: 'Explain quantum computing in simple terms',
-    webapp: 'Create a responsive chat application with user authentication',
+    webapp: 'Create a chat app',
     excalidraw: 'Create a system architecture diagram for a microservice application with API gateway, user service, payment service, and notification service',
     graphviz: 'フローチャートを作成して。初めにユーザーが入力して、バリデーションを行い、有効なら処理をして、DBに保存して結果を表示する流れ。無効ならユーザー入力に戻る',
     mermaid: 'ECサイトのシーケンス図を作成して。ユーザーがアプリで商品を閲覧し、APIがDBから商品データを取得して表示する。その後ユーザーがカートに商品を追加し、カートデータが更新される流れ'

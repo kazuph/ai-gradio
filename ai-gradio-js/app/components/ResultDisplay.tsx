@@ -377,6 +377,86 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                           </ReactMarkdown>
                         </div>
                       </div>
+                    ) : promptType === 'webapp' ? (
+                      <div className="space-y-4">
+                        <div className="w-full flex justify-between items-center mb-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // WebアプリのPreviewをトグル表示
+                              const previewKey = `preview-${uniqueKey}`;
+                              const previewElement = document.getElementById(previewKey);
+                              const previewContainer = document.getElementById(`preview-container-${uniqueKey}`);
+                              
+                              if (previewContainer) {
+                                const currentDisplay = previewContainer.style.display;
+                                const newDisplay = currentDisplay === 'none' ? 'block' : 'none';
+                                previewContainer.style.display = newDisplay;
+                                
+                                // 「開く」操作の場合は、プレビューを再生成
+                                if (newDisplay === 'block' && previewElement) {
+                                  previewContainer.innerHTML = '';
+                                  const previewDiv = document.createElement('div');
+                                  previewDiv.id = previewKey;
+                                  previewDiv.innerHTML = result.output;
+                                  previewDiv.className = 'webapp-preview';
+                                  previewDiv.style.color = 'black';
+                                  previewContainer.appendChild(previewDiv);
+                                }
+                              }
+                            }}
+                            className="flex items-center text-sm font-medium text-[var(--color-text-primary)]"
+                          >
+                            <span>Preview</span>
+                            <span className="ml-2" id={`preview-toggle-${uniqueKey}`}>▼</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => copyToClipboard(result.output, uniqueKey)}
+                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                            type="button"
+                          >
+                            {copyStatus[uniqueKey] || 'コピー'}
+                          </button>
+                        </div>
+
+                        <div 
+                          id={`preview-container-${uniqueKey}`}
+                          className="relative border rounded p-4 bg-white overflow-auto mb-4"
+                        >
+                          <div
+                            id={`preview-${uniqueKey}`}
+                            dangerouslySetInnerHTML={{ __html: result.output }}
+                            className="webapp-preview"
+                            style={{ color: 'black' }}  // テキスト色を強制的に黒に設定
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
+                            className="flex items-center text-sm font-medium text-[var(--color-text-primary)]"
+                          >
+                            <span>Source Code</span>
+                            <span className="ml-2">{showCode[uniqueKey] ? '▼' : '▶'}</span>
+                          </button>
+                          
+                          {showCode[uniqueKey] && (
+                            <SyntaxHighlighter
+                              language="html"
+                              style={vscDarkPlus}
+                              customStyle={{
+                                margin: 0,
+                                borderRadius: '4px',
+                                fontSize: '0.875rem'
+                              }}
+                            >
+                              {result.output}
+                            </SyntaxHighlighter>
+                          )}
+                        </div>
+                      </div>
                     ) : (
                       <div className="w-full flex justify-end">
                         <button
