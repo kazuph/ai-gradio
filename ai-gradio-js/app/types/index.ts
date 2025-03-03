@@ -1,8 +1,8 @@
-import { INTEGRATED_MODELS } from "../constants/models";
+import type { INTEGRATED_MODELS } from "../constants/models";
 
 export type ModelType = typeof INTEGRATED_MODELS[number];
 
-export type PromptType = "text" | "webapp";
+export type PromptType = "text" | "webapp" | "excalidraw" | "graphviz" | "mermaid";
 
 export interface GenerationRequest {
   query: string;
@@ -13,17 +13,14 @@ export interface GenerationRequest {
 }
 
 export interface GenerationResponse {
-  results: {
-    model: ModelType;
-    output: string;
-    error?: string;
-    startTime?: number;
-    endTime?: number;
-  }[];
+  results: LLMResponse[];
   plan?: string;
 }
 
 export interface LLMResponse {
-  content: string;
+  model: string;
+  output: string;
   error?: string;
+  startTime?: number;
+  endTime?: number;
 }

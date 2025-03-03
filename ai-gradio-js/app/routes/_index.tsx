@@ -66,29 +66,42 @@ export default function Index() {
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [completedRequests, setCompletedRequests] = useState(0);
   const [totalRequests, setTotalRequests] = useState(0);
+  const [defaultQueries, setDefaultQueries] = useState({
+    text: 'Explain quantum computing in simple terms',
+    webapp: 'Create a responsive chat application with user authentication',
+    excalidraw: 'Create a system architecture diagram for a microservice application with API gateway, user service, payment service, and notification service',
+    graphviz: 'digraph G { rankdir=TB; node [shape=box, style=filled, fillcolor=lightblue]; A [label="Start"]; B [label="User Input"]; C [label="Validation"]; D [label="Process Data"]; E [label="Save to DB"]; F [label="Show Results"]; G [label="End"]; A -> B -> C; C -> D [label="Valid"]; C -> B [label="Invalid"]; D -> E -> F -> G; }',
+    mermaid: 'sequenceDiagram\n  participant User\n  participant App\n  participant API\n  participant DB\n  User->>App: Browse products\n  App->>API: Request product data\n  API->>DB: Query products\n  DB-->>API: Return products\n  API-->>App: Send product data\n  App-->>User: Display products\n  User->>App: Add item to cart\n  App->>API: Update cart\n  API->>DB: Save cart data\n  DB-->>API: Confirm update\n  API-->>App: Cart updated\n  App-->>User: Show updated cart'
+  });
 
   useEffect(() => {
     // プロンプトタイプに応じてシステムプロンプトを設定
     switch (promptType) {
       case 'text':
         setSystemPrompt(DEFAULT_TEXT_SYSTEM_PROMPT);
+        setQuery(defaultQueries.text);
         break;
       case 'webapp':
         setSystemPrompt(DEFAULT_WEBAPP_SYSTEM_PROMPT);
+        setQuery(defaultQueries.webapp);
         break;
       case 'excalidraw':
         setSystemPrompt(DEFAULT_EXCALIDRAW_SYSTEM_PROMPT);
+        setQuery(defaultQueries.excalidraw);
         break;
       case 'graphviz':
         setSystemPrompt(DEFAULT_GRAPHVIZ_SYSTEM_PROMPT);
+        setQuery(defaultQueries.graphviz);
         break;
       case 'mermaid':
         setSystemPrompt(DEFAULT_MERMAID_SYSTEM_PROMPT);
+        setQuery(defaultQueries.mermaid);
         break;
       default:
         setSystemPrompt(DEFAULT_WEBAPP_SYSTEM_PROMPT);
+        setQuery(defaultQueries.webapp);
     }
-  }, [promptType]);
+  }, [promptType, defaultQueries]);
 
   useEffect(() => {
     if (useLlmApi) {
