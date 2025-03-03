@@ -56,7 +56,14 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
       return match[1];
     }
     
-    // コードブロックがない場合は、出力全体を返す（SVGタグを除く）
+    // コードブロックがない場合は、<code>タグ内のコンテンツを探す
+    const codeTagRegex = /<code>([\s\S]*?)<\/code>/i;
+    const codeTagMatch = codeTagRegex.exec(text);
+    if (codeTagMatch) {
+      return codeTagMatch[1];
+    }
+    
+    // コードブロックもcodeタグもない場合は、出力全体を返す（SVGタグを除く）
     const withoutSvg = text.replace(/<svg[^>]*>[\s\S]*?<\/svg>/g, '').trim();
     return withoutSvg || text;
   }, [promptType]);
@@ -257,17 +264,9 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                       <div className="mb-2 text-sm font-medium text-[var(--color-text-primary)]">
                         {diagramTypeDisplay} Source Code
                       </div>
-                      <SyntaxHighlighter
-                        language={promptType === 'excalidraw' ? 'json' : promptType}
-                        style={vscDarkPlus}
-                        customStyle={{
-                          margin: 0,
-                          borderRadius: '4px',
-                          fontSize: '0.875rem'
-                        }}
-                      >
+                      <pre className="bg-[var(--color-bg-secondary)] p-4 rounded overflow-auto">
                         {diagramCode}
-                      </SyntaxHighlighter>
+                      </pre>
                     </div>
                   )}
                 </div>
