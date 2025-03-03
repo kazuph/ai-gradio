@@ -66,13 +66,43 @@ export default function Index() {
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [completedRequests, setCompletedRequests] = useState(0);
   const [totalRequests, setTotalRequests] = useState(0);
+  // 有名Webサービスのリスト
+  const famousWebServices = [
+    'AirBnB', 'Twitter', 'Instagram', 'Facebook', 'TikTok', 
+    'Spotify', 'Netflix', 'YouTube', 'Amazon', 'Uber', 
+    'Lyft', 'Pinterest', 'LinkedIn', 'Slack', 'Discord', 
+    'Dropbox', 'Google Maps', 'Twitch', 'Reddit', 'Shopify'
+  ];
+
+  // ランダムにWebサービスを選択する関数
+  const getRandomWebService = () => {
+    const randomIndex = Math.floor(Math.random() * famousWebServices.length);
+    return famousWebServices[randomIndex];
+  };
+
+  // デフォルトで選ばれるWebサービス
+  const [selectedService, setSelectedService] = useState(getRandomWebService());
+
   const [defaultQueries, setDefaultQueries] = useState({
     text: 'Explain quantum computing in simple terms',
     webapp: 'Create a chat app',
-    excalidraw: 'Create a system architecture diagram for a microservice application with API gateway, user service, payment service, and notification service',
-    graphviz: 'フローチャートを作成して。初めにユーザーが入力して、バリデーションを行い、有効なら処理をして、DBに保存して結果を表示する流れ。無効ならユーザー入力に戻る',
-    mermaid: 'ECサイトのシーケンス図を作成して。ユーザーがアプリで商品を閲覧し、APIがDBから商品データを取得して表示する。その後ユーザーがカートに商品を追加し、カートデータが更新される流れ'
+    excalidraw: `${selectedService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`,
+    graphviz: `${selectedService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`,
+    mermaid: `${selectedService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`
   });
+
+  // 新しいWebサービスをランダムに選択する関数
+  const refreshWebService = () => {
+    const newService = getRandomWebService();
+    setSelectedService(newService);
+    
+    setDefaultQueries(prev => ({
+      ...prev,
+      excalidraw: `${newService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`,
+      graphviz: `${newService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`,
+      mermaid: `${newService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`
+    }));
+  };
 
   useEffect(() => {
     // プロンプトタイプに応じてシステムプロンプトを設定
@@ -296,57 +326,82 @@ export default function Index() {
               />
             </fetcher.Form>
 
-            <div className="flex flex-wrap gap-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  value="text"
-                  checked={promptType === 'text'}
-                  onChange={(e) => setPromptType(e.target.value as PromptType)}
-                  className="form-radio h-4 w-4 text-[var(--color-accent)]"
-                />
-                <span className="ml-2">Text</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  value="webapp"
-                  checked={promptType === 'webapp'}
-                  onChange={(e) => setPromptType(e.target.value as PromptType)}
-                  className="form-radio h-4 w-4 text-[var(--color-accent)]"
-                />
-                <span className="ml-2">Web App</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  value="excalidraw"
-                  checked={promptType === 'excalidraw'}
-                  onChange={(e) => setPromptType(e.target.value as PromptType)}
-                  className="form-radio h-4 w-4 text-[var(--color-accent)]"
-                />
-                <span className="ml-2">Excalidraw</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  value="graphviz"
-                  checked={promptType === 'graphviz'}
-                  onChange={(e) => setPromptType(e.target.value as PromptType)}
-                  className="form-radio h-4 w-4 text-[var(--color-accent)]"
-                />
-                <span className="ml-2">GraphViz</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  value="mermaid"
-                  checked={promptType === 'mermaid'}
-                  onChange={(e) => setPromptType(e.target.value as PromptType)}
-                  className="form-radio h-4 w-4 text-[var(--color-accent)]"
-                />
-                <span className="ml-2">Mermaid</span>
-              </label>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-4">
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    value="text"
+                    checked={promptType === 'text'}
+                    onChange={(e) => {
+                      const newType = e.target.value as PromptType;
+                      // Text選択時は何もしない
+                      setPromptType(newType);
+                    }}
+                    className="form-radio h-4 w-4 text-[var(--color-accent)]"
+                  />
+                  <span className="ml-2">Text</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    value="webapp"
+                    checked={promptType === 'webapp'}
+                    onChange={(e) => {
+                      const newType = e.target.value as PromptType;
+                      // ダイアグラムタイプを選択するたびに新しいWebサービスを選択
+                      refreshWebService();
+                      setPromptType(newType);
+                    }}
+                    className="form-radio h-4 w-4 text-[var(--color-accent)]"
+                  />
+                  <span className="ml-2">Web App</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    value="excalidraw"
+                    checked={promptType === 'excalidraw'}
+                    onChange={(e) => {
+                      const newType = e.target.value as PromptType;
+                      // ダイアグラムタイプに変更する場合は新しいWebサービスを選択
+                      if (newType === 'excalidraw' || newType === 'graphviz' || newType === 'mermaid') {
+                        refreshWebService();
+                      }
+                      setPromptType(newType);
+                    }}
+                    className="form-radio h-4 w-4 text-[var(--color-accent)]"
+                  />
+                  <span className="ml-2">Excalidraw</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    value="graphviz"
+                    checked={promptType === 'graphviz'}
+                    onChange={(e) => {
+                      refreshWebService();
+                      setPromptType(e.target.value as PromptType);
+                    }}
+                    className="form-radio h-4 w-4 text-[var(--color-accent)]"
+                  />
+                  <span className="ml-2">GraphViz</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    value="mermaid"
+                    checked={promptType === 'mermaid'}
+                    onChange={(e) => {
+                      refreshWebService();
+                      setPromptType(e.target.value as PromptType);
+                    }}
+                    className="form-radio h-4 w-4 text-[var(--color-accent)]"
+                  />
+                  <span className="ml-2">Mermaid</span>
+                </label>
+              </div>
+              
             </div>
 
             {/* Toggleable System Prompt - Moved up */}
