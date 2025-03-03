@@ -14,6 +14,7 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
   const [copyStatus, setCopyStatus] = useState<{[key: string]: string}>({});
   const [isEditing, setIsEditing] = useState<{[key: string]: boolean}>({});
   const [editableCode, setEditableCode] = useState<{[key: string]: string}>({});
+  const [showCode, setShowCode] = useState<{[key: string]: boolean}>({});
   const textareaRefs = useRef<{[key: string]: HTMLTextAreaElement}>({});
 
   // コードをクリップボードにコピーする関数
@@ -111,7 +112,42 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                     <div className="flex space-x-2">
                       <button
                         type="button"
-                        onClick={() => setIsEditing(prev => ({ ...prev, [uniqueKey]: false }))}
+                        onClick={() => {
+                          // 編集完了時に編集内容で上書き
+                          const newCode = editableCode[uniqueKey] || diagramCode || '';
+                          
+                          // SVGを更新
+                          fetch(`https://kroki.io/${promptType}/svg`, {
+                            method: 'POST',
+                            headers: { "Content-Type": "text/plain" },
+                            body: newCode
+                          })
+                          .then(response => response.text())
+                          .then(svg => {
+                            // 結果オブジェクトを更新（実際には新しいオブジェクトを作成）
+                            const updatedResult = {
+                              ...result,
+                              output: result.output.replace(/<svg[^>]*>[\s\S]*?<\/svg>/i, svg)
+                                .replace(new RegExp(`\`\`\`(?:${promptType}|json)?\\s*[\\s\\S]*?\\s*\`\`\``), 
+                                       `\`\`\`${promptType}\n${newCode}\n\`\`\``)
+                            };
+                            
+                            // responsesの該当する要素を更新
+                            const index = responses.findIndex(r => 
+                              r.model === result.model && r.startTime === result.startTime);
+                            if (index !== -1) {
+                              const newResponses = [...responses];
+                              newResponses[index] = updatedResult;
+                              // ここでは直接responsesを更新できないので、親コンポーネントに通知する必要がある
+                              // 今回は簡易的に対応
+                            }
+                            
+                            setIsEditing(prev => ({ ...prev, [uniqueKey]: false }));
+                          })
+                          .catch(error => {
+                            console.error('SVG更新エラー:', error);
+                          });
+                        }}
                         className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
                       >
                         編集終了
@@ -179,6 +215,29 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                         </div>
                         <div className="border rounded p-4 bg-white overflow-auto" style={{ height: '400px' }}>
                           <div id={`diagram-preview-${uniqueKey}`} dangerouslySetInnerHTML={{ __html: svg || '' }} />
+                        </div>
+                        <div className="flex justify-end mt-2 space-x-2">
+                          {/* 編集中もSVGをダウンロードできるようにする */}
+                          <button
+                            onClick={() => {
+                              const previewElem = document.getElementById(`diagram-preview-${uniqueKey}`);
+                              if (previewElem?.innerHTML) {
+                                const blob = new Blob([previewElem.innerHTML], { type: 'image/svg+xml' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `${promptType}-diagram-${new Date().getTime()}.svg`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                              }
+                            }}
+                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                            type="button"
+                          >
+                            SVGダウンロード
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -248,7 +307,7 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                 </div>
                 
                 <div className="p-4">
-                  <div className="mb-2 text-sm font-medium text-[var(--color-text-primary)]">
+                  <div className="mb-2 text-sm font-medium text-[var(--color-text-primary)] flex justify-between items-center">
                     {diagramTypeDisplay} Diagram Preview
                   </div>
                   <div className="border rounded p-4 bg-white overflow-auto" style={{ maxHeight: '500px' }}>
@@ -261,12 +320,29 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                   
                   {diagramCode && (
                     <div className="mt-4">
-                      <div className="mb-2 text-sm font-medium text-[var(--color-text-primary)]">
-                        {diagramTypeDisplay} Source Code
+                      <div className="mb-2 text-sm font-medium text-[var(--color-text-primary)] flex justify-between items-center">
+                        <span>{diagramTypeDisplay} Source Code</span>
+                        <button
+                          onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
+                          className="px-2 py-1 bg-gray-500 text-white rounded text-xs"
+                          type="button"
+                        >
+                          {showCode[uniqueKey] ? '閉じる' : '表示'}
+                        </button>
                       </div>
-                      <pre className="bg-[var(--color-bg-secondary)] p-4 rounded overflow-auto">
-                        {diagramCode}
-                      </pre>
+                      {showCode[uniqueKey] && (
+                        <SyntaxHighlighter
+                          language={promptType === 'excalidraw' ? 'json' : promptType}
+                          style={vscDarkPlus}
+                          customStyle={{
+                            margin: 0,
+                            borderRadius: '4px',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          {diagramCode}
+                        </SyntaxHighlighter>
+                      )}
                     </div>
                   )}
                 </div>
