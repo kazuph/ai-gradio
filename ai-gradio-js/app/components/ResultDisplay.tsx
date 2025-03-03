@@ -48,10 +48,17 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
   });
 
   // マークダウンからダイアグラムコードを抽出する関数
-  const extractDiagramCode = useCallback((text: string): string | null => {
+  const extractDiagramCode = useCallback((text: string): string => {
+    // まずコードブロックを探す
     const regex = new RegExp(`\`\`\`(?:${promptType}|json)?\\s*([\\s\\S]*?)\\s*\`\`\``);
     const match = regex.exec(text);
-    return match ? match[1] : null;
+    if (match) {
+      return match[1];
+    }
+    
+    // コードブロックがない場合は、出力全体を返す（SVGタグを除く）
+    const withoutSvg = text.replace(/<svg[^>]*>[\s\S]*?<\/svg>/g, '').trim();
+    return withoutSvg || text;
   }, [promptType]);
 
   // SVGを抽出する関数
