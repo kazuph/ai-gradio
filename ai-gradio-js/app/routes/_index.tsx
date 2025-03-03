@@ -70,8 +70,8 @@ export default function Index() {
     text: 'Explain quantum computing in simple terms',
     webapp: 'Create a responsive chat application with user authentication',
     excalidraw: 'Create a system architecture diagram for a microservice application with API gateway, user service, payment service, and notification service',
-    graphviz: 'digraph G { rankdir=TB; node [shape=box, style=filled, fillcolor=lightblue]; A [label="Start"]; B [label="User Input"]; C [label="Validation"]; D [label="Process Data"]; E [label="Save to DB"]; F [label="Show Results"]; G [label="End"]; A -> B -> C; C -> D [label="Valid"]; C -> B [label="Invalid"]; D -> E -> F -> G; }',
-    mermaid: 'sequenceDiagram\n  participant User\n  participant App\n  participant API\n  participant DB\n  User->>App: Browse products\n  App->>API: Request product data\n  API->>DB: Query products\n  DB-->>API: Return products\n  API-->>App: Send product data\n  App-->>User: Display products\n  User->>App: Add item to cart\n  App->>API: Update cart\n  API->>DB: Save cart data\n  DB-->>API: Confirm update\n  API-->>App: Cart updated\n  App-->>User: Show updated cart'
+    graphviz: 'フローチャートを作成して。初めにユーザーが入力して、バリデーションを行い、有効なら処理をして、DBに保存して結果を表示する流れ。無効ならユーザー入力に戻る',
+    mermaid: 'ECサイトのシーケンス図を作成して。ユーザーがアプリで商品を閲覧し、APIがDBから商品データを取得して表示する。その後ユーザーがカートに商品を追加し、カートデータが更新される流れ'
   });
 
   useEffect(() => {

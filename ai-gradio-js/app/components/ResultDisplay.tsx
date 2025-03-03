@@ -204,25 +204,16 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                       </button>
                     )}
                     
-                    {/* XMLまたはJSONのみをコピーするボタン */}
+                    {/* ダイアグラムコードをコピーするボタン */}
                     {diagramCode && (
                       <button
-                        onClick={() => copyToClipboard(diagramCode, `diagram-code-${uniqueKey}`)}
+                        onClick={() => copyToClipboard(diagramCode, uniqueKey)}
                         className="px-2 py-1 bg-green-500 text-white rounded text-xs"
                         type="button"
                       >
-                        {copyStatus[`diagram-code-${uniqueKey}`] || 'コードのみコピー'}
+                        {copyStatus[uniqueKey] || 'コードコピー'}
                       </button>
                     )}
-                    
-                    {/* 全体をコピーするボタン */}
-                    <button
-                      onClick={() => copyToClipboard(result.output, uniqueKey)}
-                      className="px-2 py-1 bg-purple-500 text-white rounded text-xs"
-                      type="button"
-                    >
-                      {copyStatus[uniqueKey] || '全内容コピー'}
-                    </button>
                     
                     {/* 編集ボタン */}
                     <button
