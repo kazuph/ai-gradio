@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from 'react-router';
 import { generateGemini } from '../lib/llm/gemini';
 import { generateOpenAI } from '../lib/llm/openai';
 import { generateAnthropic } from '../lib/llm/anthropic';
+import { generateDeepSeek } from '../lib/llm/deepseek';
 import { DEFAULT_TEXT_SYSTEM_PROMPT } from '../constants/models';
 import type { ModelType, PromptType } from '../types';
 
@@ -35,6 +36,8 @@ async function generateForModel(
         return await generateAnthropic(query, model, systemPrompt, env);
       case "gemini":
         return await generateGemini(query, model, systemPrompt, env);
+      case "deepseek":
+        return await generateDeepSeek(query, model, systemPrompt, env);
       default:
         throw new Error(`Unsupported provider: ${provider}`);
     }
