@@ -23,9 +23,28 @@ export const MODEL_CATEGORIES = {
     "deepseek:deepseek-chat",
     "deepseek:deepseek-coder",
   ],
-} as const;
+};
 
-export const INTEGRATED_MODELS = Object.values(MODEL_CATEGORIES).flat() as readonly string[];
+// より防御的な実装
+export const INTEGRATED_MODELS = (() => {
+  try {
+    // Object.valuesの結果が配列であることを確認
+    const categoryValues = Object.values(MODEL_CATEGORIES);
+    if (!Array.isArray(categoryValues)) {
+      console.error('MODEL_CATEGORIES values is not an array');
+      return [];
+    }
+    
+    // 各カテゴリの値が配列であることを確認
+    const validArrays = categoryValues.filter(arr => Array.isArray(arr));
+    
+    // 配列をフラット化
+    return validArrays.flatMap(arr => arr) as readonly string[];
+  } catch (error) {
+    console.error('Error processing MODEL_CATEGORIES:', error);
+    return [] as readonly string[];
+  }
+})();
 
 export const DEFAULT_WEBAPP_SYSTEM_PROMPT = `You are an expert web developer. When asked to create a web application:
 1. Always respond with HTML code wrapped in \`\`\`html code blocks.
