@@ -1,6 +1,7 @@
 import { generateOpenAI } from "./openai";
 import { generateAnthropic } from "./anthropic";
 import { generateGemini } from "./gemini";
+import { generateDeepSeek } from "./deepseek";
 import type { GenerationRequest, GenerationResponse, LLMResponse, ModelType } from "../../types";
 import { DEFAULT_TEXT_SYSTEM_PROMPT } from "../../constants/models";
 
@@ -34,6 +35,8 @@ async function generateForModel(
         return await generateAnthropic(query, model, systemPrompt, env);
       case "gemini":
         return await generateGemini(query, model, systemPrompt, env);
+      case "deepseek":
+        return await generateDeepSeek(query, model, systemPrompt, env);
       default:
         throw new Error(`Unsupported provider: ${provider}`);
     }
