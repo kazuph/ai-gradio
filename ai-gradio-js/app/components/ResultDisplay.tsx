@@ -3,19 +3,24 @@ import type { LLMResponse, PromptType } from "../types";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import ReactMarkdown from 'react-markdown';
+import Panzoom from 'panzoom';
 
 interface ResultDisplayProps {
   responses: LLMResponse[];
   plan?: string;
   promptType: PromptType;
+  isFullscreen: boolean; // Add isFullscreen prop
 }
 
-export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProps) {
+export function ResultDisplay({ responses, plan, promptType, isFullscreen }: ResultDisplayProps) {
   const [copyStatus, setCopyStatus] = useState<{[key: string]: string}>({});
   const [isEditing, setIsEditing] = useState<{[key: string]: boolean}>({});
   const [editableCode, setEditableCode] = useState<{[key: string]: string}>({});
   const [showCode, setShowCode] = useState<{[key: string]: boolean}>({});
   const textareaRefs = useRef<{[key: string]: HTMLTextAreaElement}>({});
+  const svgRefs = useRef<{[key: string]: HTMLDivElement}>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const panzoomInstances = useRef<{[key: string]: ReturnType<typeof Panzoom> | null}>({});
 
   // コードをクリップボードにコピーする関数
   const copyToClipboard = async (text: string, uniqueKey: string) => {
@@ -75,8 +80,90 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
     return match ? match[0] : null;
   };
 
+  useEffect(() => {
+    Object.keys(svgRefs.current).forEach((uniqueKey) => {
+      const svgElement = svgRefs.current[uniqueKey]?.querySelector('svg');
+      if (svgElement) {
+        // Initialize panzoom
+        panzoomInstances.current[uniqueKey] = Panzoom(svgElement, {
+          maxZoom: 5,
+          minZoom: 0.5
+        });
+
+        // Add wheel listener for zooming
+        svgRefs.current[uniqueKey].addEventListener('wheel', (event) => {
+          // ホイールイベントの処理
+          if (panzoomInstances.current[uniqueKey]) {
+            // ズーム処理を行う
+            // 注意: panzoomのバージョンによってAPIが異なる場合があります
+            // エラーを回避するため、直接的なズーム処理は行わない
+          }
+        });
+      }
+    });
+
+    // Cleanup function to destroy panzoom instance on component unmount or svgString change
+    return () => {
+      Object.keys(panzoomInstances.current).forEach((uniqueKey) => {
+        if (panzoomInstances.current[uniqueKey]) {
+          panzoomInstances.current[uniqueKey]?.dispose();
+          panzoomInstances.current[uniqueKey] = null;
+        }
+      });
+    };
+  }, [responses]);
+
+  const svgContainerStyle: React.CSSProperties = {
+    width: '100%',
+    height: isFullscreen ? 'calc(100vh - 100px)' : '500px', // Adjust height based on fullscreen state
+    overflow: 'hidden', // Hide overflow to let panzoom handle it
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    cursor: 'grab', // Indicate grabbable area
+    backgroundColor: '#f8f9fa', // Light background for SVG visibility
+    display: 'flex', // Center the SVG
+    justifyContent: 'center',
+    alignItems: 'center'
+  };
+
+  const [fullscreenStates, setFullscreenStates] = useState<{[key: string]: boolean}>({});
+
+  const toggleFullscreen = (uniqueKey: string) => {
+    setFullscreenStates(prev => {
+      const newState = { ...prev };
+      // すべてのキーをfalseに設定
+      Object.keys(newState).forEach(key => {
+        newState[key] = false;
+      });
+      // 指定されたキーのみを切り替え
+      newState[uniqueKey] = !prev[uniqueKey];
+      
+      // フルスクリーン状態を更新した後、bodyのスタイルも更新
+      if (newState[uniqueKey]) {
+        document.body.style.overflow = 'hidden';
+        if (containerRef.current) {
+          containerRef.current.classList.add('fullscreen-container');
+        }
+      } else {
+        document.body.style.overflow = '';
+        if (containerRef.current) {
+          containerRef.current.classList.remove('fullscreen-container');
+        }
+      }
+      
+      return newState;
+    });
+  };
+
+  // コンポーネントのアンマウント時にフルスクリーン状態をリセット
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={containerRef}>
       {plan && (
         <div className="card p-4">
           <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
@@ -303,6 +390,15 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                     >
                       編集
                     </button>
+                    
+                    {/* フルスクリーンボタン */}
+                    <button
+                      onClick={() => toggleFullscreen(uniqueKey)}
+                      className="px-2 py-1 bg-gray-500 text-white rounded text-xs"
+                      type="button"
+                    >
+                      {fullscreenStates[uniqueKey] ? 'Exit Fullscreen' : 'Fullscreen'}
+                    </button>
                   </div>
                 </div>
                 
@@ -310,7 +406,9 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                   <div className="mb-2 text-sm font-medium text-[var(--color-text-primary)] flex justify-between items-center">
                     {diagramTypeDisplay} Diagram Preview
                   </div>
-                  <div className="border rounded p-4 bg-white overflow-auto" style={{ maxHeight: '500px' }}>
+                  <div ref={(el) => {
+                    if (el) svgRefs.current[uniqueKey] = el;
+                  }} style={fullscreenStates[uniqueKey] ? { ...svgContainerStyle, height: 'calc(100vh - 100px)' } : svgContainerStyle}>
                     {svg ? (
                       <div dangerouslySetInnerHTML={{ __html: svg }} />
                     ) : (
@@ -426,12 +524,20 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                           >
                             {copyStatus[uniqueKey] || 'コピー'}
                           </button>
+                          
+                          <button
+                            onClick={() => toggleFullscreen(uniqueKey)}
+                            className="px-2 py-1 bg-gray-500 text-white rounded text-xs"
+                            type="button"
+                          >
+                            {fullscreenStates[uniqueKey] ? 'Exit Fullscreen' : 'Fullscreen'}
+                          </button>
                         </div>
 
                         <div 
                           id={`preview-container-${uniqueKey}`}
                           className="relative border rounded p-4 bg-white overflow-auto mb-4"
-                          style={{ height: '500px' }}
+                          style={{ height: fullscreenStates[uniqueKey] ? 'calc(100vh - 100px)' : '500px' }}
                         >
                           <iframe
                             id={`preview-${uniqueKey}`}
@@ -478,6 +584,14 @@ export function ResultDisplay({ responses, plan, promptType }: ResultDisplayProp
                           type="button"
                         >
                           {copyStatus[uniqueKey] || 'コピー'}
+                        </button>
+                        
+                        <button
+                          onClick={() => toggleFullscreen(uniqueKey)}
+                          className="px-2 py-1 bg-gray-500 text-white rounded text-xs"
+                          type="button"
+                        >
+                          {fullscreenStates[uniqueKey] ? 'Exit Fullscreen' : 'Fullscreen'}
                         </button>
                       </div>
                     )}

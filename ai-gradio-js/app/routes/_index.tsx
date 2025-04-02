@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFetcher, type ActionFunctionArgs, type MetaFunction } from 'react-router';
 import { ModelSelector } from '../components/ModelSelector';
 import { QueryInput } from '../components/QueryInput';
@@ -401,7 +401,6 @@ export default function Index() {
                   <span className="ml-2">Mermaid</span>
                 </label>
               </div>
-              
             </div>
 
             {/* Toggleable System Prompt - Moved up */}
@@ -459,7 +458,7 @@ export default function Index() {
       <div className="flex-1 p-4 overflow-y-auto">
         {(isLoading || allResponses.length > 0) && (
           <div className="max-w-[1200px] mx-auto">
-            <ResultDisplay responses={allResponses} plan={currentPlan} promptType={promptType} />
+            <ResultDisplay responses={allResponses} plan={currentPlan} promptType={promptType} isLoading={isLoading} />
           </div>
         )}
       </div>
