@@ -5,6 +5,9 @@ export const MODEL_CATEGORIES = {
     "openai:gpt-4o-mini",
     "openai:gpt-4o",
     "openai:chatgpt-4o-latest",
+    "openai:gpt-4.1",
+    "openai:gpt-4.1-mini",
+    "openai:gpt-4.1-nano",
   ],
   Anthropic: [
     "anthropic:claude-3-5-sonnet-20241022",
