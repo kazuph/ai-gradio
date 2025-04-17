@@ -74,7 +74,23 @@ export async function generateDiagramPreview(diagramSource: string, diagramType:
     return `<div class='error'>Error: No ${diagramType} code block found in the response.</div>`;
   }
   
-  const svgContent = await getKrokiSvg(sourceCode, diagramType);
+  // Mermaid の場合、説明文中の半角括弧を全角括弧に変換してエラーを回避
+  let processedSource = sourceCode;
+  if (diagramType === 'mermaid') {
+    // ノードラベルなど、角括弧内の半角括弧のみを全角に変換
+    processedSource = sourceCode.replace(/\[([^\]]*?)\]/g, (_match, content) => {
+      const replaced = content.replace(/\(/g, '（').replace(/\)/g, '）');
+      return `[${replaced}]`;
+    });
+    // Mermaidのコメント（行頭やインラインの%）を削除してエラーを回避
+    processedSource = processedSource
+      .replace(/^[ \t]*%+.*$/gm, '')   // 行頭コメントを削除
+      .replace(/\s+%.*$/gm, '')       // インラインコメントを削除
+      .replace(/[ \t]+$/gm, '');      // 行末空白を削除
+  }
+  
+  // 図を生成する際は、変換後のソースを使用
+  const svgContent = await getKrokiSvg(processedSource, diagramType);
   
   const html = `
   <div class="result-card">
@@ -87,7 +103,7 @@ export async function generateDiagramPreview(diagramSource: string, diagramType:
       ${svgContent}
     </div>
     <div class="code-content">
-      <pre><code>${sourceCode}</code></pre>
+      <pre><code>${processedSource}</code></pre>
     </div>
   </div>
   `;
