@@ -25,10 +25,17 @@ export async function generateAnthropic(
         timeout: 180000, // タイムアウトを3分に延長
       });
 
+      // Sonnet 3.5 は出力トークン数上限8192以内に制限
+      const isSonnet35 = originalModelName.startsWith("claude-3-5-sonnet");
+      // トークン上限を設定
+      let maxTokens = isThinkingModel ? 36000 : 20000;
+      if (isSonnet35) {
+        maxTokens = 8192;
+      }
       // リクエストオプションを設定
       const requestOptions: Anthropic.MessageCreateParams = {
         model: modelName,
-        max_tokens: isThinkingModel ? 36000 : 20000,
+        max_tokens: maxTokens,
         messages: [
           { role: "user", content: query },
         ],
@@ -41,9 +48,11 @@ export async function generateAnthropic(
 
       // Thinkingモデルの場合、thinking関連のパラメータを追加
       if (isThinkingModel) {
+        // Sonnet 3.5 はバジェットも8192以内に制限
+        const thinkingBudget = isSonnet35 ? 8192 : 16000;
         requestOptions.thinking = {
           type: "enabled",
-          budget_tokens: 16000, // 思考プロセスに使用するトークンの最大数
+          budget_tokens: thinkingBudget,
         };
       }
       

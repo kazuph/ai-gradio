@@ -2,7 +2,7 @@ import type { INTEGRATED_MODELS } from "../constants/models";
 
 export type ModelType = typeof INTEGRATED_MODELS[number];
 
-export type PromptType = "text" | "webapp" | "excalidraw" | "graphviz" | "mermaid";
+export type PromptType = "text" | "webapp" | "graphviz" | "mermaid";
 
 export interface GenerationRequest {
   query: string;

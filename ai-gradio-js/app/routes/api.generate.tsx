@@ -3,7 +3,7 @@ import { generateGemini } from '../lib/llm/gemini';
 import { generateOpenAI } from '../lib/llm/openai';
 import { generateAnthropic } from '../lib/llm/anthropic';
 import { generateDeepSeek } from '../lib/llm/deepseek';
-import { DEFAULT_TEXT_SYSTEM_PROMPT, DEFAULT_EXCALIDRAW_SYSTEM_PROMPT, DEFAULT_GRAPHVIZ_SYSTEM_PROMPT, DEFAULT_MERMAID_SYSTEM_PROMPT } from '../constants/models';
+import { DEFAULT_TEXT_SYSTEM_PROMPT, DEFAULT_GRAPHVIZ_SYSTEM_PROMPT, DEFAULT_MERMAID_SYSTEM_PROMPT } from '../constants/models';
 import type { ModelType, PromptType } from '../types';
 // @ts-ignore
 import { json } from '@remix-run/cloudflare';
@@ -67,9 +67,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const type = formData.get('type') as string;
     
     // Override systemPrompt if diagram type is selected
-    if (promptType === 'excalidraw') {
-      systemPrompt = DEFAULT_EXCALIDRAW_SYSTEM_PROMPT;
-    } else if (promptType === 'graphviz') {
+    if (promptType === 'graphviz') {
       systemPrompt = DEFAULT_GRAPHVIZ_SYSTEM_PROMPT;
     } else if (promptType === 'mermaid') {
       systemPrompt = DEFAULT_MERMAID_SYSTEM_PROMPT;
@@ -90,7 +88,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       const response = await generateForModel(model as ModelType, query, systemPrompt, context.cloudflare.env);
       
       // 図表示用の処理
-      if (promptType === 'excalidraw' || promptType === 'graphviz' || promptType === 'mermaid') {
+      if (promptType === 'graphviz' || promptType === 'mermaid') {
         const diagramHtml = await generateDiagramPreview(response.output, promptType);
         return new Response(JSON.stringify({
           model,

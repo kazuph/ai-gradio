@@ -180,7 +180,7 @@ export function ResultDisplay({ responses, plan, promptType, isFullscreen }: Res
           const uniqueKey = `${result.model}-${result.startTime}`;
           
           // 図表示モード用のアクション
-          if (promptType === 'excalidraw' || promptType === 'graphviz' || promptType === 'mermaid') {
+          if (promptType === 'graphviz' || promptType === 'mermaid') {
             const diagramCode = extractDiagramCode(result.output);
             const svg = extractSvg(result.output);
             const diagramTypeDisplay = promptType.charAt(0).toUpperCase() + promptType.slice(1);
@@ -429,8 +429,8 @@ export function ResultDisplay({ responses, plan, promptType, isFullscreen }: Res
                         </button>
                       </div>
                       {showCode[uniqueKey] && (
-                        <SyntaxHighlighter
-                          language={promptType === 'excalidraw' ? 'json' : promptType}
+                          <SyntaxHighlighter
+                          language={promptType}
                           style={vscDarkPlus}
                           customStyle={{
                             margin: 0,
@@ -517,13 +517,6 @@ export function ResultDisplay({ responses, plan, promptType, isFullscreen }: Res
                             <span className="ml-2" id={`preview-toggle-${uniqueKey}`}>▼</span>
                           </button>
                           
-                          <button
-                            onClick={() => copyToClipboard(result.output, uniqueKey)}
-                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
-                            type="button"
-                          >
-                            {copyStatus[uniqueKey] || 'コピー'}
-                          </button>
                           
                           <button
                             onClick={() => toggleFullscreen(uniqueKey)}
@@ -552,14 +545,23 @@ export function ResultDisplay({ responses, plan, promptType, isFullscreen }: Res
                         </div>
                         
                         <div className="space-y-2">
-                          <button
-                            type="button"
-                            onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
-                            className="flex items-center text-sm font-medium text-[var(--color-text-primary)]"
-                          >
-                            <span>Source Code</span>
-                            <span className="ml-2">{showCode[uniqueKey] ? '▼' : '▶'}</span>
-                          </button>
+                          <div className="flex justify-between items-center mb-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowCode(prev => ({ ...prev, [uniqueKey]: !prev[uniqueKey] }))}
+                              className="flex items-center text-sm font-medium text-[var(--color-text-primary)]"
+                            >
+                              <span>Source Code</span>
+                              <span className="ml-2">{showCode[uniqueKey] ? '▼' : '▶'}</span>
+                            </button>
+                            <button
+                              onClick={() => copyToClipboard(result.output, uniqueKey)}
+                              className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                              type="button"
+                            >
+                              {copyStatus[uniqueKey] || 'コピー'}
+                            </button>
+                          </div>
                           
                           {showCode[uniqueKey] && (
                             <SyntaxHighlighter

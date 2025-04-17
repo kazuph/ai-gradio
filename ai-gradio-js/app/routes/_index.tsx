@@ -3,10 +3,9 @@ import { useFetcher, type ActionFunctionArgs, type MetaFunction } from 'react-ro
 import { ModelSelector } from '../components/ModelSelector';
 import { QueryInput } from '../components/QueryInput';
 import { ResultDisplay } from '../components/ResultDisplay';
-import { 
-  DEFAULT_TEXT_SYSTEM_PROMPT, 
+import {
+  DEFAULT_TEXT_SYSTEM_PROMPT,
   DEFAULT_WEBAPP_SYSTEM_PROMPT,
-  DEFAULT_EXCALIDRAW_SYSTEM_PROMPT,
   DEFAULT_GRAPHVIZ_SYSTEM_PROMPT,
   DEFAULT_MERMAID_SYSTEM_PROMPT
 } from '../constants/models';
@@ -86,7 +85,6 @@ export default function Index() {
   const [defaultQueries, setDefaultQueries] = useState({
     text: 'Explain quantum computing in simple terms',
     webapp: 'Create a chat app',
-    excalidraw: `${selectedService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`,
     graphviz: `${selectedService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`,
     mermaid: `${selectedService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`
   });
@@ -98,7 +96,6 @@ export default function Index() {
     
     setDefaultQueries(prev => ({
       ...prev,
-      excalidraw: `${newService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`,
       graphviz: `${newService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`,
       mermaid: `${newService}が成功した要因を示すラーニング（グロース）フローを書いてください。学びをフィードバックするので様々な箇所で循環があるはずです。`
     }));
@@ -114,10 +111,6 @@ export default function Index() {
       case 'webapp':
         setSystemPrompt(DEFAULT_WEBAPP_SYSTEM_PROMPT);
         setQuery(defaultQueries.webapp);
-        break;
-      case 'excalidraw':
-        setSystemPrompt(DEFAULT_EXCALIDRAW_SYSTEM_PROMPT);
-        setQuery(defaultQueries.excalidraw);
         break;
       case 'graphviz':
         setSystemPrompt(DEFAULT_GRAPHVIZ_SYSTEM_PROMPT);
@@ -356,23 +349,6 @@ export default function Index() {
                     className="form-radio h-4 w-4 text-[var(--color-accent)]"
                   />
                   <span className="ml-2">Web App</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    value="excalidraw"
-                    checked={promptType === 'excalidraw'}
-                    onChange={(e) => {
-                      const newType = e.target.value as PromptType;
-                      // ダイアグラムタイプに変更する場合は新しいWebサービスを選択
-                      if (newType === 'excalidraw' || newType === 'graphviz' || newType === 'mermaid') {
-                        refreshWebService();
-                      }
-                      setPromptType(newType);
-                    }}
-                    className="form-radio h-4 w-4 text-[var(--color-accent)]"
-                  />
-                  <span className="ml-2">Excalidraw</span>
                 </label>
                 <label className="inline-flex items-center">
                   <input
