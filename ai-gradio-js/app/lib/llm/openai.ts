@@ -24,13 +24,14 @@ export async function generateOpenAI(
       ],
     };
 
-    // O3モデルの場合はtemperatureを含めない
-    let params = modelName.includes("o3") 
+    // o3/o4-mini系モデルの場合はtemperatureを含めない
+    const isMiniModel = modelName.includes("o3") || modelName.includes("o4-mini");
+    let params = isMiniModel
       ? baseParams
       : { ...baseParams, temperature: 0.7 };
-      
-    // -highモードの場合はreasoning_effortを追加
-    if (isHighMode && modelName.includes("o3")) {
+
+    // -highモードの場合はreasoning_effortを追加（o3/o4-mini系のみ）
+    if (isHighMode && isMiniModel) {
       params = {
         ...params,
         reasoning_effort: "high" as const,
