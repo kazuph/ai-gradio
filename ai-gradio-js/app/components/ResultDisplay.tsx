@@ -530,7 +530,7 @@ export function ResultDisplay({ responses, plan, promptType, isFullscreen }: Res
                         <div 
                           id={`preview-container-${uniqueKey}`}
                           className="relative border rounded p-4 bg-white overflow-auto mb-4"
-                          style={{ height: fullscreenStates[uniqueKey] ? 'calc(100vh - 100px)' : '500px' }}
+                          style={fullscreenStates[uniqueKey] ? { height: 'calc(100vh - 100px)' } : { aspectRatio: '4 / 5', height: 'auto' }}
                         >
                           <iframe
                             id={`preview-${uniqueKey}`}
