@@ -18,6 +18,7 @@ export const MODEL_CATEGORIES = {
   ],
   Gemini: [
     "gemini:gemini-2.5-pro-exp-03-25",
+    "gemini:gemini-2.5-flash-preview-04-17",
     "gemini:gemini-2.0-pro-exp-02-05",
     "gemini:gemini-2.0-flash",
     "gemini:gemini-2.0-flash-lite-preview-02-05",
