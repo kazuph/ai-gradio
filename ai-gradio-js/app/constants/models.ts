@@ -17,6 +17,7 @@ export const MODEL_CATEGORIES = {
     "anthropic:claude-3-7-sonnet-20250219-thinking",
   ],
   Gemini: [
+    "gemini:gemini-2.5-pro-preview-05-06",
     "gemini:gemini-2.5-pro-exp-03-25",
     "gemini:gemini-2.5-flash-preview-04-17",
     "gemini:gemini-2.0-pro-exp-02-05",
