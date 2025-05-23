@@ -12,13 +12,15 @@ export const MODEL_CATEGORIES = {
     "openai:gpt-4.1",
   ],
   Anthropic: [
-    "anthropic:claude-3-5-sonnet-20241022",
-    "anthropic:claude-3-7-sonnet-20250219",
+    "anthropic:claude-opus-4-20250514",
+    "anthropic:claude-sonnet-4-20250514",
     "anthropic:claude-3-7-sonnet-20250219-thinking",
+    "anthropic:claude-3-7-sonnet-20250219",
+    "anthropic:claude-3-5-sonnet-20241022",
   ],
   Gemini: [
     "gemini:gemini-2.5-pro-preview-05-06",
-    "gemini:gemini-2.5-pro-exp-03-25",
+    "gemini:gemini-2.5-flash-preview-05-20",
     "gemini:gemini-2.5-flash-preview-04-17",
     "gemini:gemini-2.0-pro-exp-02-05",
     "gemini:gemini-2.0-flash",
